@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"net"
+	"strconv"
+	"strings"
 
 	"github.com/fntlnz/wirey/pkg/wireguard"
 	"github.com/vishvananda/netlink"
@@ -14,7 +16,7 @@ const ipnetmask = "255.0.0.0"
 
 type Peer struct {
 	PublicKey []byte
-	Endpoint  *string
+	Endpoint  string
 	IP        *net.IP
 }
 
@@ -25,7 +27,11 @@ type Interface struct {
 	LocalPeer  Peer
 }
 
-func NewInterface(b Backend, ifname string) (*Interface, error) {
+func NewInterface(b Backend, ifname string, endpoint string) (*Interface, error) {
+	if len(strings.Split(endpoint, ":")) != 2 {
+		return nil, fmt.Errorf("endpoint must be in format <ip>:<port>, like 192.168.1.3:3459")
+	}
+
 	privKey, err := wireguard.Genkey()
 	if err != nil {
 		return nil, err
@@ -41,12 +47,12 @@ func NewInterface(b Backend, ifname string) (*Interface, error) {
 		LocalPeer: Peer{
 			PublicKey: pubKey,
 			IP:        nil,
-			Endpoint:  nil,
+			Endpoint:  endpoint,
 		},
 	}, nil
 }
 
-func (i *Interface) Connect(privateKey string) error {
+func (i *Interface) Connect() error {
 	peers, err := i.Backend.GetPeers(i.Name)
 	if err != nil {
 		return err
@@ -66,14 +72,6 @@ func (i *Interface) Connect(privateKey string) error {
 			// Well I am already connected
 			return nil
 		}
-	}
-
-	//TODO: WARNING(who populated this freaking local peer?)
-
-	// Add myself to the distributed backend
-	err = i.Backend.Join(i.Name, i.LocalPeer)
-	if err != nil {
-		return err
 	}
 
 	// If the link already exist at this point
@@ -96,9 +94,17 @@ func (i *Interface) Connect(privateKey string) error {
 	// in the same moment
 	presentIPs := []net.IP{}
 	for _, p := range peers {
-		presentIPs = append(presentIPs, p.IP)
+		presentIPs = append(presentIPs, *p.IP)
 	}
 	ipnet, err := ipam(presentIPs)
+	if err != nil {
+		return err
+	}
+
+	i.LocalPeer.IP = ipnet
+
+	// Add myself to the distributed backend
+	err = i.Backend.Join(i.Name, i.LocalPeer)
 	if err != nil {
 		return err
 	}
@@ -108,15 +114,40 @@ func (i *Interface) Connect(privateKey string) error {
 	if err != nil {
 		return err
 	}
-	netlink.AddrAdd(wirelink, addr)
 
-	err = netlink.LinkSetUp(wirelink)
+	// Configure wireguard
+	s := strings.Split(i.LocalPeer.Endpoint, ":")
+	port, err := strconv.Atoi(s[1])
+	if err != nil {
+		return err
+	}
+	conf := wireguard.Configuration{
+		Interface: wireguard.Interface{
+			ListenPort: port,
+			PrivateKey: string(i.privateKey),
+		},
+		Peers: []wireguard.Peer{},
+	}
+
+	for _, p := range peers {
+		peer := wireguard.Peer{
+			PublicKey:  string(p.PublicKey),
+			AllowedIPs: "10.0.0.0/8", //TODO(fntlnz) this should compute the list comma separated
+			Endpoint:   p.Endpoint,
+		}
+		conf.Peers = append(conf.Peers, peer)
+	}
+
+	_, err = wireguard.SetConf(i.Name, conf)
 
 	if err != nil {
 		return err
 	}
 
-	return nil
+	netlink.AddrAdd(wirelink, addr)
+
+	// Up the link
+	return netlink.LinkSetUp(wirelink)
 }
 
 func ipam(presentIPs []net.IP) (*net.IP, error) {
