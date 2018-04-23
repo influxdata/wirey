@@ -1,0 +1,5 @@
+-email to summarize
+- finish setup interface
+- potato backend endpoint (http)
+- long polling for new things
+- purge non-up links

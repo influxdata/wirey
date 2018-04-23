@@ -10,8 +10,8 @@ cd /tmp
 curl -fsSL get.docker.com -o get-docker.sh
 sh get-docker.sh
 systemctl enable --now docker
-docker run  --name etcd -d -p 2379:2379 quay.io/coreos/etcd:v3.3
-docker run  --name etcd \
+docker rm -f etcd
+docker run  --restart always --name etcd \
   -d --net=host quay.io/coreos/etcd:v3.3 \
   /usr/local/bin/etcd \
   --listen-client-urls http://192.168.33.10:2379 \
@@ -46,7 +46,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   num_nodes.times do |n|
     config.vm.define "net-#{n+1}" do |net|
-      net.vm.synced_folder "", "/wirey"
       net.vm.box = "centos/7"
       net_ip = net_ips[n]
       net_index = n+1
