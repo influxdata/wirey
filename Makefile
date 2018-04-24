@@ -4,8 +4,6 @@ all: build
 
 .PHONY: build
 build:
-	go build ./cmd/wirey
+	mkdir -p bin
+	go build -o bin/wirey ./cmd/wirey
 
-.PHONY: clean
-clean:
-	rm -Rf thirdy_party/
