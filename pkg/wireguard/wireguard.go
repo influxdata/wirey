@@ -3,11 +3,11 @@ package wireguard
 import (
 	"bytes"
 	"fmt"
-	"html/template"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"text/template"
 )
 
 type Interface struct {
@@ -38,16 +38,33 @@ func wg(stdin io.Reader, arg ...string) ([]byte, error) {
 
 	cmd := exec.Command(path, arg...)
 
-	return cmd.Output()
+	cmd.Stdin = stdin
+	var buf bytes.Buffer
+	cmd.Stderr = &buf
+	output, err := cmd.Output()
+
+	if err != nil {
+		return nil, fmt.Errorf("%s - %s", err.Error(), buf.String())
+	}
+	return output, nil
+
 }
 
 func Genkey() ([]byte, error) {
-	return wg(nil, "genkey")
+	result, err := wg(nil, "genkey")
+	if err != nil {
+		return nil, fmt.Errorf("error generating the private key for wireguard: %s", err.Error())
+	}
+	return result, nil
 }
 
 func ExtractPubKey(privateKey []byte) ([]byte, error) {
 	stdin := bytes.NewReader(privateKey)
-	return wg(stdin, "pubkey")
+	result, err := wg(stdin, "pubkey")
+	if err != nil {
+		return nil, fmt.Errorf("error extracting the public key: %s", err.Error())
+	}
+	return result, nil
 }
 
 func SetConf(ifname string, conf Configuration) ([]byte, error) {
@@ -63,7 +80,13 @@ func SetConf(ifname string, conf Configuration) ([]byte, error) {
 	if _, err := cfile.Write(rendered); err != nil {
 		return nil, err
 	}
-	return wg(nil, "setconf", "wg0", cfile.Name())
+
+	result, err := wg(nil, "setconf", "wg0", cfile.Name())
+
+	if err != nil {
+		return nil, fmt.Errorf("error setting the configuration for wireguard: %s", err.Error())
+	}
+	return result, nil
 }
 
 func RenderConfiguration(conf Configuration) ([]byte, error) {

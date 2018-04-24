@@ -10,7 +10,7 @@ func TestRenderConfiguration(t *testing.T) {
 	conf := Configuration{
 		Interface: Interface{
 			ListenPort: 49082,
-			PrivateKey: "lII9alJkYCGPDRaXGELHmDrDpGML/3c3lCveUeOGxnQ=",
+			PrivateKey: "iOIMgrmMHt/L/GT+Fw2DruosUXDlBgSclXo52S//41k=",
 		},
 		Peers: []Peer{
 			{
@@ -33,7 +33,7 @@ func TestRenderConfiguration(t *testing.T) {
 
 	expected := `[Interface]
 ListenPort = 49082
-PrivateKey = lII9alJkYCGPDRaXGELHmDrDpGML/3c3lCveUeOGxnQ=
+PrivateKey = iOIMgrmMHt/L/GT+Fw2DruosUXDlBgSclXo52S//41k=
 
 
 [Peer]
@@ -42,10 +42,10 @@ AllowedIPs = 10.0.0.1/32
 Endpoint = 172.31.23.163:50113
 
 [Peer]
-PublicKey = nAMY8gSy32B7rLV8kiLq4GKJBbYT3amT&#43;c0DI5vikik=
+PublicKey = nAMY8gSy32B7rLV8kiLq4GKJBbYT3amT+c0DI5vikik=
 AllowedIPs = 10.0.0.2/32
 Endpoint = 172.31.23.162:43043
 `
 
-	assert.Equal(t, []byte(expected), rendered)
+	assert.Equal(t, expected, string(rendered))
 }

@@ -1,7 +1,7 @@
 package wireguard
 
 const confTemplate = `[Interface]
-ListenPort = {{ .Interface.ListenPort }}
+ListenPort = {{ .Interface.ListenPort  }}
 PrivateKey = {{ .Interface.PrivateKey }}
 
 {{ range .Peers }}
