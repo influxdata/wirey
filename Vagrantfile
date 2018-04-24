@@ -30,7 +30,7 @@ make install
 SCRIPT
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  num_nodes = 2
+  num_nodes = 3
   base_ip = "192.168.33."
   net_ips = num_nodes.times.collect { |n| base_ip + "#{n+11}" }
 

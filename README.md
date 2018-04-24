@@ -55,7 +55,7 @@ cd /vagrant
 vagrant ssh net-2
 sudo su -
 cd /vagrant
-./wirey --endpoint 192.168.33.11 --ipaddr 172.30.0.4 --privatekeypath my.key --etcd 192.168.33.11:2379
+./bin/wirey --endpoint 192.168.33.11 --ipaddr 172.30.0.4 --privatekeypath my.key --etcd 192.168.33.11:2379
 ```
 
 

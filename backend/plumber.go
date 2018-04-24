@@ -213,12 +213,14 @@ func (i *Interface) Connect() error {
 		}
 
 		for _, p := range workingPeers {
-			peer := wireguard.Peer{
-				PublicKey:  string(p.PublicKey),
-				AllowedIPs: "0.0.0.0/0", //TODO(fntlnz) this should compute the list comma separated
-				Endpoint:   p.Endpoint,
+			if bytes.Equal(p.PublicKey, i.LocalPeer.PublicKey) {
+				continue
 			}
-			conf.Peers = append(conf.Peers, peer)
+			conf.Peers = append(conf.Peers, wireguard.Peer{
+				PublicKey:  string(p.PublicKey),
+				AllowedIPs: fmt.Sprintf("%s/32", p.IP.String()),
+				Endpoint:   p.Endpoint,
+			})
 		}
 
 		_, err = wireguard.SetConf(i.Name, conf)
