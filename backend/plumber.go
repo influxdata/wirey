@@ -163,16 +163,15 @@ func (i *Interface) Connect() error {
 
 		// We don't change anything if the peers remain the same
 		newPeersSHA := extractPeersSHA(workingPeers)
-		log.Printf("new peer sha: %s\n", newPeersSHA)
 		if newPeersSHA == peersSHA {
 			peersSHA = newPeersSHA
 			time.Sleep(time.Second * 5)
-			log.Printf("doing nothing")
 			continue
 		}
+		log.Println("The peer list changed, reconfiguring...")
 		peersSHA = newPeersSHA
 
-		log.Println("delete old link")
+		log.Println("Delete old link")
 		// delete any old link
 		link, _ := netlink.LinkByName(i.Name)
 		if link != nil {
@@ -236,6 +235,8 @@ func (i *Interface) Connect() error {
 		if err != nil {
 			return err
 		}
+
+		log.Println("Link up")
 	}
 
 	return nil
