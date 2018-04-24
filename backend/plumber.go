@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fntlnz/wirey/pkg/wireguard"
+	"github.com/influxdata/wirey/pkg/wireguard"
 	"github.com/vishvananda/netlink"
 )
 
@@ -31,8 +31,17 @@ type Interface struct {
 }
 
 func NewInterface(b Backend, ifname string, endpoint string, ipaddr string, privateKeyPath string) (*Interface, error) {
-	if len(strings.Split(endpoint, ":")) != 2 {
+	hostPort := strings.Split(endpoint, ":")
+	if len(hostPort) != 2 {
 		return nil, fmt.Errorf("endpoint must be in format <ip>:<port>, like 192.168.1.3:3459")
+	}
+
+	if net.ParseIP(hostPort[0]) == nil {
+		return nil, fmt.Errorf("endpoint provided is not valid")
+	}
+
+	if err := validatePort(hostPort[1]); err != nil {
+		return nil, err
 	}
 
 	if _, err := os.Stat(privateKeyPath); os.IsNotExist(err) {
@@ -227,5 +236,18 @@ func (i *Interface) Connect() error {
 		}
 	}
 
+	return nil
+}
+
+func validatePort(port string) error {
+	if port != "" {
+		v, err := strconv.Atoi(port)
+		if err != nil {
+			return err
+		}
+		if v < 0 || v > 65535 {
+			return fmt.Errorf("port not valid %q", port)
+		}
+	}
 	return nil
 }
