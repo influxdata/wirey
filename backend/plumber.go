@@ -126,10 +126,13 @@ func (i *Interface) addressAlreadyTaken() (bool, error) {
 }
 
 func (i *Interface) Connect() error {
+restart:
 	taken, err := i.addressAlreadyTaken()
 
 	if err != nil {
-		return err
+		log.Printf("Error during the first connection: %s, Retry in 5 seconds.", err.Error())
+		time.Sleep(time.Second * 5)
+		goto restart
 	}
 
 	if taken {
