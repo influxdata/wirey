@@ -3,6 +3,7 @@ package backend
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -16,6 +17,8 @@ import (
 	"github.com/influxdata/wirey/pkg/wireguard"
 	"github.com/vishvananda/netlink"
 )
+
+const ifnamesiz = 16
 
 type Peer struct {
 	PublicKey []byte
@@ -42,6 +45,12 @@ func NewInterface(b Backend, ifname string, endpoint string, ipaddr string, priv
 
 	if err := validatePort(hostPort[1]); err != nil {
 		return nil, err
+	}
+
+	// Check that the passed interface name is ok for the kernel
+	// https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/tree/include/uapi/linux/if.h?h=v4.14.36#n33
+	if len(ifname) > ifnamesiz {
+		return nil, fmt.Errorf("the interface name size cannot be more than %d", ifnamesiz)
 	}
 
 	if _, err := os.Stat(privateKeyPath); os.IsNotExist(err) {
@@ -79,29 +88,6 @@ func NewInterface(b Backend, ifname string, endpoint string, ipaddr string, priv
 	}, nil
 }
 
-func checkLinkAlreadyConnected(name string, peers []Peer, localPeer Peer) bool {
-	link, err := netlink.LinkByName(name)
-	if err != nil {
-		return false
-	}
-	if link == nil {
-		return false
-	}
-
-	for _, peer := range peers {
-		if bytes.Equal(peer.PublicKey, localPeer.PublicKey) {
-			// oh gosh, I have the interface but the link is down
-			if link.Attrs().OperState != netlink.OperUp {
-				// TODO(fntlnz): check here that the link type is wireguard?
-				return false
-			}
-			// Well I am already connected
-			return true
-		}
-	}
-	return false
-}
-
 func extractPeersSHA(workingPeers []Peer) string {
 	sort.Slice(workingPeers, func(i, j int) bool {
 		comparison := bytes.Compare(workingPeers[i].PublicKey, workingPeers[j].PublicKey)
@@ -112,9 +98,14 @@ func extractPeersSHA(workingPeers []Peer) string {
 	})
 	keys := ""
 	for _, p := range workingPeers {
-		keys = fmt.Sprintf("%s%s", keys, p.PublicKey)
+		// hash the full peer to verify if it changed
+		peerj, _ := json.Marshal(p)
+		peerh := sha256.New()
+		peerh.Write(peerj)
+		keys = fmt.Sprintf("%s%x", keys, peerh.Sum(nil))
 	}
 
+	// hash of all the peers
 	h := sha256.New()
 	h.Write([]byte(keys))
 
@@ -135,17 +126,18 @@ func (i *Interface) addressAlreadyTaken() (bool, error) {
 }
 
 func (i *Interface) Connect() error {
+restart:
 	taken, err := i.addressAlreadyTaken()
 
 	if err != nil {
-		return err
+		log.Printf("Error during the first connection: %s, Retry in 5 seconds.", err.Error())
+		time.Sleep(time.Second * 5)
+		goto restart
 	}
 
 	if taken {
 		return fmt.Errorf("address already taken: %s", *i.LocalPeer.IP)
 	}
-	// Leave so I can recreate the peer on the distributed store
-	i.Backend.Leave(i.Name, i.LocalPeer)
 
 	// Join
 	err = i.Backend.Join(i.Name, i.LocalPeer)
@@ -158,13 +150,14 @@ func (i *Interface) Connect() error {
 	for {
 		workingPeers, err := i.Backend.GetPeers(i.Name)
 		if err != nil {
-			return err
+			log.Printf("Error extracting getting peers from backend: %s. Retry in 5 seconds", err.Error())
+			time.Sleep(time.Second * 5)
+			continue
 		}
 
 		// We don't change anything if the peers remain the same
 		newPeersSHA := extractPeersSHA(workingPeers)
 		if newPeersSHA == peersSHA {
-			peersSHA = newPeersSHA
 			time.Sleep(time.Second * 5)
 			continue
 		}
