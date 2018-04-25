@@ -88,29 +88,6 @@ func NewInterface(b Backend, ifname string, endpoint string, ipaddr string, priv
 	}, nil
 }
 
-func checkLinkAlreadyConnected(name string, peers []Peer, localPeer Peer) bool {
-	link, err := netlink.LinkByName(name)
-	if err != nil {
-		return false
-	}
-	if link == nil {
-		return false
-	}
-
-	for _, peer := range peers {
-		if bytes.Equal(peer.PublicKey, localPeer.PublicKey) {
-			// oh gosh, I have the interface but the link is down
-			if link.Attrs().OperState != netlink.OperUp {
-				// TODO(fntlnz): check here that the link type is wireguard?
-				return false
-			}
-			// Well I am already connected
-			return true
-		}
-	}
-	return false
-}
-
 func extractPeersSHA(workingPeers []Peer) string {
 	sort.Slice(workingPeers, func(i, j int) bool {
 		comparison := bytes.Compare(workingPeers[i].PublicKey, workingPeers[j].PublicKey)
@@ -170,7 +147,9 @@ func (i *Interface) Connect() error {
 	for {
 		workingPeers, err := i.Backend.GetPeers(i.Name)
 		if err != nil {
-			return err
+			log.Printf("Error extracting getting peers from backend: %s. Retry in 5 seconds", err.Error())
+			time.Sleep(time.Second * 5)
+			continue
 		}
 
 		// We don't change anything if the peers remain the same
