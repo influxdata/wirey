@@ -46,17 +46,6 @@ func (e *EtcdBackend) Join(ifname string, p Peer) error {
 	return nil
 }
 
-func (e *EtcdBackend) Leave(ifname string, p Peer) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	kvc := clientv3.NewKV(e.Client)
-	_, err := kvc.Delete(ctx, fmt.Sprintf("%s/%s/%s", etcdWireyPrefix, ifname, p.PublicKey))
-	cancel()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (e *EtcdBackend) GetPeers(ifname string) ([]Peer, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	kvc := clientv3.NewKV(e.Client)

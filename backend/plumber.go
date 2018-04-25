@@ -144,8 +144,6 @@ func (i *Interface) Connect() error {
 	if taken {
 		return fmt.Errorf("address already taken: %s", *i.LocalPeer.IP)
 	}
-	// Leave so I can recreate the peer on the distributed store
-	i.Backend.Leave(i.Name, i.LocalPeer)
 
 	// Join
 	err = i.Backend.Join(i.Name, i.LocalPeer)
