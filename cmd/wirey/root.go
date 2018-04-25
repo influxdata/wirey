@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/influxdata/wirey/backend"
 	"github.com/spf13/cobra"
@@ -42,6 +43,7 @@ var rootCmd = &cobra.Command{
 }
 
 func backendFactory() (backend.Backend, error) {
+	// etcd backend
 	if etcdBackend != nil {
 		b, err := backend.NewEtcdBackend(etcdBackend)
 		if err != nil {
@@ -50,10 +52,19 @@ func backendFactory() (backend.Backend, error) {
 		return b, nil
 	}
 
+	// http backend with optional basic auth
 	if len(httpBackend) != 0 {
 		b, err := backend.NewHTTPBackend(httpBackend)
 		if err != nil {
 			return nil, err
+		}
+		if len(httpBackendBasicAuth) > 2 {
+			splitted := strings.Split(httpBackendBasicAuth, ":")
+			username, password := splitted[0], splitted[1]
+			b.BasicAuth = &backend.BasicAuth{
+				Username: username,
+				Password: password,
+			}
 		}
 		return b, nil
 	}

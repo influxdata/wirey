@@ -10,7 +10,115 @@ Each machine should be able to see the same distributed backend in order to join
 ## Implemented backends
 
 - etcd
-- aws metadata api (in progress)
+- http(s) - with optional basic auth
+
+### ETCD
+
+The etcd backend is useful when you want to use etcd to synchronize wireguard peers.
+
+Example usage:
+
+- endpoint: the listen ip address on the current machine
+- ipaddr: the ip address you want to assign to the interface
+- etcd comma seprated list of etcd servers
+
+```bash
+./bin/wirey --endpoint 192.168.33.11 --ipaddr 172.30.0.4 --etcd 192.168.33.10:2379
+```
+
+### HTTP(s) with optional basic auth
+
+The http backend is useful when you want to write your own implementation.
+
+The only suppported auth mechanism for now is Basic Authentication.
+
+Example usage:
+
+- endpoint: the listen ip address on the current machine
+- ipaddr: the ip address you want to assign to the interface
+- http: the http endpoint where to reach the server without trailing slash (/)
+- httpbasicauth: username and password to use if the server implements basic auth, in the form `username:password`
+
+```bash
+./bin/wirey --endpoint 192.168.33.12 --ipaddr 10.30.0.80 --http http://192.168.33.10:8080 --httpbasicauth "time:series"
+```
+
+#### HTTP Server endpoints
+You can find an example of http server in [examples/httpbackend](examples/httpbackend)
+
+Starting from the endpoint you provide you provide to wirey, the expected routes are:
+
+#### POST `/{ifname}/{publickeysha}`
+
+**URL parameters:**
+
+- ifname: interface name, wirey defaults to `wg0`
+- publickeysha: the sha256 of the public key, this is just used as a key and as of now it's not matched with anything in `wirey` since the real public key is embedded in the body.
+
+**URL Example:**
+
+```
+https://myservice.com/wireguard-discovery/wg0/234sfkske03kdssk32
+```
+
+**Request Body example:**
+
+```json
+{
+    "Endpoint": "192.168.33.11:2345",
+    "IP": "10.30.0.10",
+    "PublicKey": "T053azhMRW1sV2tQbjVISUgycnZtQWt5bDdKN3hJL3IwMjhDWG1zNVRpbz0K"
+}
+```
+
+**Expected status codes:**
+
+- 201 Created
+- 401 Unauthorized (for basic auth)
+
+#### GET `/{ifname}`
+
+**URL Example:**
+
+```
+https://myservice.com/wireguard-discovery/wg0
+```
+
+**URL parameters:**
+
+- ifname: interface name, wirey defaults to `wg0`
+
+**Description:**
+
+Returns all the peers for the provided interface.
+
+
+**Expected status codes:**
+
+- 200 OK
+- 401 Unauthorized (for basic auth)
+
+**Response body example:**
+
+```json
+[
+    {
+        "Endpoint": "192.168.33.11:2345",
+        "IP": "10.30.0.10",
+        "PublicKey": "T053azhMRW1sV2tQbjVISUgycnZtQWt5bDdKN3hJL3IwMjhDWG1zNVRpbz0K"
+    },
+    {
+        "Endpoint": "192.168.33.12:2345",
+        "IP": "10.30.0.80",
+        "PublicKey": "ZlE5a005ZDV1enpGei8xc25STXpnb3U4MVJkYVFmTXczL0NRR2svdEFpRT0K"
+    },
+    {
+        "Endpoint": "192.168.33.13:2345",
+        "IP": "10.30.0.60",
+        "PublicKey": "WUp2cDFPb0FhTkU5UC9vdlQrb0tIK29XRGtxVDhQenlzZnR1R1p4eEF5OD0K"
+    }
+]
+```
 
 
 ## Local Development
@@ -47,7 +155,7 @@ make
 vagrant ssh net-1
 sudo su -
 cd /vagrant
-./wirey --endpoint 192.168.33.11 --ipaddr 172.30.0.4 --etcd 192.168.33.10:2379
+./bin/wirey --endpoint 192.168.33.11 --ipaddr 172.30.0.4 --etcd 192.168.33.10:2379
 ```
 
 ### on net-2

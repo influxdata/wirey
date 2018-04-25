@@ -3,6 +3,7 @@ package backend
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -120,9 +121,14 @@ func extractPeersSHA(workingPeers []Peer) string {
 	})
 	keys := ""
 	for _, p := range workingPeers {
-		keys = fmt.Sprintf("%s%s", keys, p.PublicKey)
+		// hash the full peer to verify if it changed
+		peerj, _ := json.Marshal(p)
+		peerh := sha256.New()
+		peerh.Write(peerj)
+		keys = fmt.Sprintf("%s%x", keys, peerh.Sum(nil))
 	}
 
+	// hash of all the peers
 	h := sha256.New()
 	h.Write([]byte(keys))
 
@@ -170,7 +176,6 @@ func (i *Interface) Connect() error {
 		// We don't change anything if the peers remain the same
 		newPeersSHA := extractPeersSHA(workingPeers)
 		if newPeersSHA == peersSHA {
-			peersSHA = newPeersSHA
 			time.Sleep(time.Second * 5)
 			continue
 		}
