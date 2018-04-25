@@ -14,7 +14,7 @@ const (
 )
 
 type EtcdBackend struct {
-	Client *clientv3.Client
+	client *clientv3.Client
 }
 
 func NewEtcdBackend(endpoints []string) (*EtcdBackend, error) {
@@ -26,7 +26,7 @@ func NewEtcdBackend(endpoints []string) (*EtcdBackend, error) {
 		return nil, err
 	}
 	return &EtcdBackend{
-		Client: cli,
+		client: cli,
 	}, nil
 }
 
@@ -37,7 +37,7 @@ func (e *EtcdBackend) Join(ifname string, p Peer) error {
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	kvc := clientv3.NewKV(e.Client)
+	kvc := clientv3.NewKV(e.client)
 	_, err = kvc.Put(ctx, fmt.Sprintf("%s/%s/%s", etcdWireyPrefix, ifname, p.PublicKey), string(pj))
 	cancel()
 	if err != nil {
@@ -48,7 +48,7 @@ func (e *EtcdBackend) Join(ifname string, p Peer) error {
 
 func (e *EtcdBackend) GetPeers(ifname string) ([]Peer, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	kvc := clientv3.NewKV(e.Client)
+	kvc := clientv3.NewKV(e.client)
 	res, err := kvc.Get(ctx, fmt.Sprintf("%s/%s", etcdWireyPrefix, ifname), clientv3.WithPrefix())
 	cancel()
 	if err != nil {
