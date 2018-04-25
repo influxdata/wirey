@@ -17,6 +17,8 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
+const ifnamesiz = 16
+
 type Peer struct {
 	PublicKey []byte
 	Endpoint  string
@@ -42,6 +44,12 @@ func NewInterface(b Backend, ifname string, endpoint string, ipaddr string, priv
 
 	if err := validatePort(hostPort[1]); err != nil {
 		return nil, err
+	}
+
+	// Check that the passed interface name is ok for the kernel
+	// https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/tree/include/uapi/linux/if.h?h=v4.14.36#n33
+	if len(ifname) > ifnamesiz {
+		return nil, fmt.Errorf("the interface name size cannot be more than %d", ifnamesiz)
 	}
 
 	if _, err := os.Stat(privateKeyPath); os.IsNotExist(err) {
