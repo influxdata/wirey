@@ -26,6 +26,7 @@ The machines available are:
 - discovery-server
 - net-1
 - net-2
+- net-3
 
 1. Start the vagrant machines and the sync
 
@@ -46,7 +47,7 @@ make
 vagrant ssh net-1
 sudo su -
 cd /vagrant
-./wirey --endpoint 192.168.33.11 --ipaddr 172.30.0.4 --privatekeypath my.key --etcd 192.168.33.10:2379
+./wirey --endpoint 192.168.33.11 --ipaddr 172.30.0.4 --etcd 192.168.33.10:2379
 ```
 
 ### on net-2
@@ -55,9 +56,17 @@ cd /vagrant
 vagrant ssh net-2
 sudo su -
 cd /vagrant
-./bin/wirey --endpoint 192.168.33.11 --ipaddr 172.30.0.4 --privatekeypath my.key --etcd 192.168.33.11:2379
+./bin/wirey --endpoint 192.168.33.12 --ipaddr 172.30.0.5 --etcd 192.168.33.10:2379
 ```
 
+### on net-3
+
+```bash
+vagrant ssh net-2
+sudo su -
+cd /vagrant
+./bin/wirey --endpoint 192.168.33.13 --ipaddr 172.30.0.6 --etcd 192.168.33.10:2379
+```
 
 ### Verify that the interfaces are up
 
