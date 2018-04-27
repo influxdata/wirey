@@ -54,6 +54,7 @@ func (b *HTTPBackend) Join(ifname string, p Peer) error {
 	if err != nil {
 		return err
 	}
+	req.Header.Add("Content-Type", "application/json")
 
 	if b.BasicAuth != nil {
 		req.SetBasicAuth(b.BasicAuth.Username, b.BasicAuth.Password)
