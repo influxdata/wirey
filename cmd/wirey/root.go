@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/influxdata/wirey/backend"
@@ -30,6 +31,13 @@ var rootCmd = &cobra.Command{
 
 		if err != nil {
 			log.Fatal(err)
+		}
+
+		privKeyBaseDir := filepath.Dir(privateKeyPath)
+		if _, err := os.Stat(privKeyBaseDir); os.IsNotExist(err) {
+			if err := os.Mkdir(privKeyBaseDir, 0600); err != nil {
+				log.Fatal("Unable to create the base directory for the wirey private key: %s - %s", privKeyBaseDir, err.Error())
+			}
 		}
 
 		i, err := backend.NewInterface(b, ifname, fmt.Sprintf("%s:%s", endpoint, endpointPort), ipAddr, privateKeyPath)
