@@ -12,3 +12,8 @@ build:
 
 test:
 	go test -v ./...
+
+.PHONY: image
+image:
+	docker build -t quay.io/influxdb/wirey:latest .
+

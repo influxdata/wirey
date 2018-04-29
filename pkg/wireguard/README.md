@@ -1,5 +1,6 @@
 # pkg/wireguard
 
-This package allows wirey to interface with wireguard.
+Sources:
+wireguard.c: https://github.com/WireGuard/WireGuard/blob/ec65415b231bc9a0fd5c72ab16d98153ae426177/contrib/examples/embeddable-wg-library/wireguard.c
+wireguard.h: https://github.com/WireGuard/WireGuard/blob/ec65415b231bc9a0fd5c72ab16d98153ae426177/contrib/examples/embeddable-wg-library/wireguard.h
 
-For now it is doing so doing some os execs, but a better approach would be to use the embeddable library (if can be used to do so): https://github.com/influxdata/wirey/issues/1
