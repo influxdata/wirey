@@ -19,6 +19,13 @@ import (
 )
 
 const ifnamesiz = 16
+const maxretries = 5
+const retryttl = time.Second * 5
+const peercheckttl = time.Second * 5
+
+const (
+	errMaxRetriesReached = "maximum number of connection retries reached"
+)
 
 type Peer struct {
 	PublicKey []byte
@@ -31,6 +38,7 @@ type Interface struct {
 	Name       string
 	privateKey []byte
 	LocalPeer  Peer
+	retries    int
 }
 
 func NewInterface(b Backend, ifname string, endpoint string, ipaddr string, privateKeyPath string) (*Interface, error) {
@@ -125,14 +133,21 @@ func (i *Interface) addressAlreadyTaken() (bool, error) {
 	return false, nil
 }
 
+func (i *Interface) retryConnection(reason string) error {
+	log.Printf("Retry connect, reason: %s", reason)
+	time.Sleep(retryttl)
+	i.retries = i.retries + 1
+	if i.retries > maxretries-1 {
+		return fmt.Errorf("%s: Last error: %s", errMaxRetriesReached, reason)
+	}
+	return i.Connect()
+}
+
 func (i *Interface) Connect() error {
-restart:
 	taken, err := i.addressAlreadyTaken()
 
 	if err != nil {
-		log.Printf("Error during the first connection: %s, Retry in 5 seconds.", err.Error())
-		time.Sleep(time.Second * 5)
-		goto restart
+		return i.retryConnection(err.Error())
 	}
 
 	if taken {
@@ -150,15 +165,15 @@ restart:
 	for {
 		workingPeers, err := i.Backend.GetPeers(i.Name)
 		if err != nil {
-			log.Printf("Error extracting getting peers from backend: %s. Retry in 5 seconds", err.Error())
-			time.Sleep(time.Second * 5)
-			continue
+			return i.retryConnection(fmt.Sprintf("problem during extraction of peers from the backend: %s", err.Error()))
 		}
 
 		// We don't change anything if the peers remain the same
 		newPeersSHA := extractPeersSHA(workingPeers)
 		if newPeersSHA == peersSHA {
-			time.Sleep(time.Second * 5)
+			time.Sleep(peercheckttl)
+			// reset the retry counter since this connection is established
+			i.retries = 0
 			continue
 		}
 		log.Println("The peer list changed, reconfiguring...")
@@ -180,17 +195,16 @@ restart:
 		}
 		err = netlink.LinkAdd(wirelink)
 		if err != nil {
-			return fmt.Errorf("error adding the wireguard link: %s", err.Error())
+			return i.retryConnection(fmt.Sprintf("error adding the wireguard link: %s", err.Error()))
 		}
 
 		// Add the actual address to the link
 		addr, err := netlink.ParseAddr(fmt.Sprintf("%s/24", i.LocalPeer.IP.String()))
 		if err != nil {
-			return fmt.Errorf("error parsing the new ip address: %s", err.Error())
+			return i.retryConnection(fmt.Sprintf("error parsing the new ip address: %s", err.Error()))
 		}
 
 		// Configure wireguard
-		// TODO(fntlnz) how do we assign the external ip address?
 		s := strings.Split(i.LocalPeer.Endpoint, ":")
 		port, err := strconv.Atoi(s[1])
 		if err != nil {
@@ -218,7 +232,7 @@ restart:
 		_, err = wireguard.SetConf(i.Name, conf)
 
 		if err != nil {
-			return err
+			return i.retryConnection(err.Error())
 		}
 
 		netlink.AddrAdd(wirelink, addr)
@@ -230,6 +244,8 @@ restart:
 		}
 
 		log.Println("Link up")
+		// reset the retries counter since this made it!
+		i.retries = 0
 	}
 
 	return nil

@@ -20,12 +20,9 @@ var etcdBackend []string
 var httpBackend string
 var httpBackendBasicAuth string
 
-// rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "wirey",
 	Short: "manage local wireguard interfaces in a distributed system",
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
 	Run: func(cmd *cobra.Command, args []string) {
 		b, err := backendFactory()
 
@@ -36,7 +33,7 @@ var rootCmd = &cobra.Command{
 		privKeyBaseDir := filepath.Dir(privateKeyPath)
 		if _, err := os.Stat(privKeyBaseDir); os.IsNotExist(err) {
 			if err := os.Mkdir(privKeyBaseDir, 0600); err != nil {
-				log.Fatal("Unable to create the base directory for the wirey private key: %s - %s", privKeyBaseDir, err.Error())
+				log.Fatalf("Unable to create the base directory for the wirey private key: %s - %s", privKeyBaseDir, err.Error())
 			}
 		}
 
