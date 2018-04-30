@@ -152,7 +152,7 @@ func (i *Interface) retryConnection(reason string) error {
 	}
 	err := i.Connect()
 
-	if err != nil {
+	if err == nil {
 		i.retries = 0
 	}
 
