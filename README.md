@@ -43,6 +43,16 @@ Example usage:
 ./bin/wirey --endpoint 192.168.33.12 --ipaddr 10.30.0.80 --http http://192.168.33.10:8080 --httpbasicauth "time:series"
 ```
 
+Example usage using env variables:
+
+```bash
+export WIREY_ENDPOINT="192.168.33.12"
+export WIREY_IPADDR="10.30.0.80"
+export WIREY_HTTP="http://192.168.33.10:8080"
+export WIREY_HTTPBASICAUTH="time:series"
+./bin/wirey
+```
+
 #### HTTP Server endpoints
 You can find an example of http server in [examples/httpbackend](examples/httpbackend)
 

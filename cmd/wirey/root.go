@@ -9,16 +9,8 @@ import (
 
 	"github.com/influxdata/wirey/backend"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
-
-var endpoint string
-var endpointPort string
-var ipAddr string
-var privateKeyPath string
-var ifname string
-var etcdBackend []string
-var httpBackend string
-var httpBackendBasicAuth string
 
 var rootCmd = &cobra.Command{
 	Use:   "wirey",
@@ -30,6 +22,7 @@ var rootCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
+		privateKeyPath := viper.GetString("privatekeypath")
 		privKeyBaseDir := filepath.Dir(privateKeyPath)
 		if _, err := os.Stat(privKeyBaseDir); os.IsNotExist(err) {
 			if err := os.Mkdir(privKeyBaseDir, 0600); err != nil {
@@ -37,6 +30,10 @@ var rootCmd = &cobra.Command{
 			}
 		}
 
+		ifname := viper.GetString("ifname")
+		endpoint := viper.GetString("endpoint")
+		endpointPort := viper.GetString("endpoint-port")
+		ipAddr := viper.GetString("ipaddr")
 		i, err := backend.NewInterface(b, ifname, fmt.Sprintf("%s:%s", endpoint, endpointPort), ipAddr, privateKeyPath)
 
 		if err != nil {
@@ -49,7 +46,8 @@ var rootCmd = &cobra.Command{
 
 func backendFactory() (backend.Backend, error) {
 	// etcd backend
-	if etcdBackend != nil {
+	etcdBackend := viper.GetStringSlice("etcd")
+	if len(etcdBackend) > 0 {
 		b, err := backend.NewEtcdBackend(etcdBackend)
 		if err != nil {
 			return nil, err
@@ -57,12 +55,13 @@ func backendFactory() (backend.Backend, error) {
 		return b, nil
 	}
 
-	// http backend with optional basic auth
+	httpBackend := viper.GetString("http")
 	if len(httpBackend) != 0 {
 		b, err := backend.NewHTTPBackend(httpBackend)
 		if err != nil {
 			return nil, err
 		}
+		httpBackendBasicAuth := viper.GetString("httpbasicauth")
 		if len(httpBackendBasicAuth) > 2 {
 			splitted := strings.Split(httpBackendBasicAuth, ":")
 			username, password := splitted[0], splitted[1]
@@ -87,12 +86,30 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&endpoint, "endpoint", "", "endpoint for this machine, e.g: 192.168.1.3")
-	rootCmd.PersistentFlags().StringVar(&endpointPort, "endpoint-port", "2345", "endpoint port for this machine")
-	rootCmd.PersistentFlags().StringVar(&ipAddr, "ipaddr", "", "the ip for this node inside the tunnel, e.g: 10.0.0.3")
-	rootCmd.PersistentFlags().StringVar(&privateKeyPath, "privatekeypath", "/etc/wirey/privkey", "the local path where to load the private key from, if empty, a private key will be generated.")
-	rootCmd.PersistentFlags().StringVar(&ifname, "ifname", "wg0", "the name to use for the interface (must be the same in all the peers)")
-	rootCmd.PersistentFlags().StringVar(&httpBackend, "http", "", "the http backend endpoint to use as backend, see also httpbasicauth if you need basic authentication")
-	rootCmd.PersistentFlags().StringVar(&httpBackendBasicAuth, "httpbasicauth", "", "basic auth for the http backend, in form username:password")
-	rootCmd.PersistentFlags().StringArrayVar(&etcdBackend, "etcd", nil, "array of etcd servers to connect to")
+
+	pflags := rootCmd.PersistentFlags()
+	pflags.String("endpoint", "", "endpoint for this machine, e.g: 192.168.1.3")
+	pflags.String("endpoint-port", "2345", "endpoint port for this machine")
+	pflags.StringSlice("etcd", nil, "array of etcd servers to connect to")
+	pflags.String("http", "", "the http backend endpoint to use as backend, see also httpbasicauth if you need basic authentication")
+	pflags.String("httpbasicauth", "", "basic auth for the http backend, in form username:password")
+	pflags.String("ifname", "wg0", "the name to use for the interface (must be the same in all the peers)")
+	pflags.String("ipaddr", "", "the ip for this node inside the tunnel, e.g: 10.0.0.3")
+	pflags.String("privatekeypath", "/etc/wirey/privkey", "the local path where to load the private key from, if empty, a private key will be generated.")
+
+	rootCmd.MarkFlagRequired("endpoint")
+	rootCmd.MarkFlagRequired("ipaddr")
+
+	viper.BindPFlag("endpoint", pflags.Lookup("endpoint"))
+	viper.BindPFlag("endpoint-port", pflags.Lookup("endpoint-port"))
+	viper.BindPFlag("etcd", pflags.Lookup("etcd"))
+	viper.BindPFlag("http", pflags.Lookup("http"))
+	viper.BindPFlag("httpbasicauth", pflags.Lookup("httpbasicauth"))
+	viper.BindPFlag("ifname", pflags.Lookup("ifname"))
+	viper.BindPFlag("ipaddr", pflags.Lookup("ipaddr"))
+	viper.BindPFlag("privatekeypath", pflags.Lookup("privatekeypath"))
+
+	viper.SetEnvPrefix("wirey")
+	viper.AutomaticEnv()
+	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 }
