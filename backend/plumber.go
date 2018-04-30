@@ -150,7 +150,13 @@ func (i *Interface) retryConnection(reason string) error {
 	if i.retries > maxretries-1 {
 		return fmt.Errorf("%s: Last error: %s", errMaxRetriesReached, reason)
 	}
-	return i.Connect()
+	err := i.Connect()
+
+	if err != nil {
+		i.retries = 0
+	}
+
+	return err
 }
 
 func (i *Interface) Connect() error {
@@ -182,8 +188,6 @@ func (i *Interface) Connect() error {
 		newPeersSHA := extractPeersSHA(workingPeers)
 		if newPeersSHA == peersSHA {
 			time.Sleep(peercheckttl)
-			// reset the retry counter since this connection is established
-			i.retries = 0
 			continue
 		}
 		log.Println("The peer list changed, reconfiguring...")
@@ -254,8 +258,6 @@ func (i *Interface) Connect() error {
 		}
 
 		log.Println("Link up")
-		// reset the retries counter since this made it!
-		i.retries = 0
 	}
 
 	return nil
