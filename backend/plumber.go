@@ -18,13 +18,23 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-const ifnamesiz = 16
-const maxretries = 5
-const retryttl = time.Second * 5
-const peercheckttl = time.Second * 5
+const (
+	ifnamesiz    = 16
+	maxretries   = 5
+	retryttl     = time.Second * 5
+	peercheckttl = time.Second * 5
+)
 
 const (
-	errMaxRetriesReached = "maximum number of connection retries reached"
+	errMaxRetriesReached      = "maximum number of connection retries reached"
+	errEndpointFormatNotValid = "endpoint must be in format <ip>:<port>, like 192.168.1.3:3459"
+	errInvalidEndpoint        = "endpoint provided is not valid"
+	errInterfaceNameLength    = "the interface name size cannot be more than " + string(ifnamesiz)
+	errPrivateKeyWriting      = "error writing private key file: %s"
+	errPrivateKeyOpening      = "error opening private key file: %s"
+	errAddressAlreadyTaken    = "address already taken: %s"
+	errAddLink                = "error adding the wireguard link: %s"
+	errIntConversionPort      = "error during port conversion to int: %s"
 )
 
 type Peer struct {
@@ -44,11 +54,11 @@ type Interface struct {
 func NewInterface(b Backend, ifname string, endpoint string, ipaddr string, privateKeyPath string) (*Interface, error) {
 	hostPort := strings.Split(endpoint, ":")
 	if len(hostPort) != 2 {
-		return nil, fmt.Errorf("endpoint must be in format <ip>:<port>, like 192.168.1.3:3459")
+		return nil, fmt.Errorf(errEndpointFormatNotValid)
 	}
 
 	if net.ParseIP(hostPort[0]) == nil {
-		return nil, fmt.Errorf("endpoint provided is not valid")
+		return nil, fmt.Errorf(errInvalidEndpoint)
 	}
 
 	if err := validatePort(hostPort[1]); err != nil {
@@ -58,7 +68,7 @@ func NewInterface(b Backend, ifname string, endpoint string, ipaddr string, priv
 	// Check that the passed interface name is ok for the kernel
 	// https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/tree/include/uapi/linux/if.h?h=v4.14.36#n33
 	if len(ifname) > ifnamesiz {
-		return nil, fmt.Errorf("the interface name size cannot be more than %d", ifnamesiz)
+		return nil, fmt.Errorf(errInterfaceNameLength)
 	}
 
 	if _, err := os.Stat(privateKeyPath); os.IsNotExist(err) {
@@ -69,14 +79,14 @@ func NewInterface(b Backend, ifname string, endpoint string, ipaddr string, priv
 
 		err = ioutil.WriteFile(privateKeyPath, privKey, 0600)
 		if err != nil {
-			return nil, fmt.Errorf("error writing private key file: %s", err.Error())
+			return nil, fmt.Errorf(errPrivateKeyWriting, err.Error())
 		}
 	}
 
 	privKey, err := ioutil.ReadFile(privateKeyPath)
 
 	if err != nil {
-		return nil, fmt.Errorf("error opening private key file: %s", err.Error())
+		return nil, fmt.Errorf(errPrivateKeyOpening, err.Error())
 	}
 
 	pubKey, err := wireguard.ExtractPubKey(privKey)
@@ -151,7 +161,7 @@ func (i *Interface) Connect() error {
 	}
 
 	if taken {
-		return fmt.Errorf("address already taken: %s", *i.LocalPeer.IP)
+		return fmt.Errorf(errAddressAlreadyTaken, *i.LocalPeer.IP)
 	}
 
 	// Join
@@ -195,7 +205,7 @@ func (i *Interface) Connect() error {
 		}
 		err = netlink.LinkAdd(wirelink)
 		if err != nil {
-			return i.retryConnection(fmt.Sprintf("error adding the wireguard link: %s", err.Error()))
+			return i.retryConnection(fmt.Sprintf(errAddLink, err.Error()))
 		}
 
 		// Add the actual address to the link
@@ -208,7 +218,7 @@ func (i *Interface) Connect() error {
 		s := strings.Split(i.LocalPeer.Endpoint, ":")
 		port, err := strconv.Atoi(s[1])
 		if err != nil {
-			return fmt.Errorf("error during port conversion to int: %s", err.Error())
+			return fmt.Errorf(errIntConversionPort, err.Error())
 		}
 		conf := wireguard.Configuration{
 			Interface: wireguard.Interface{
