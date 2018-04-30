@@ -18,7 +18,24 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-const ifnamesiz = 16
+const (
+	ifnamesiz    = 16
+	maxretries   = 5
+	retryttl     = time.Second * 5
+	peercheckttl = time.Second * 5
+)
+
+const (
+	errMaxRetriesReached      = "maximum number of connection retries reached"
+	errEndpointFormatNotValid = "endpoint must be in format <ip>:<port>, like 192.168.1.3:3459"
+	errInvalidEndpoint        = "endpoint provided is not valid"
+	errInterfaceNameLength    = "the interface name size cannot be more than " + string(ifnamesiz)
+	errPrivateKeyWriting      = "error writing private key file: %s"
+	errPrivateKeyOpening      = "error opening private key file: %s"
+	errAddressAlreadyTaken    = "address already taken: %s"
+	errAddLink                = "error adding the wireguard link: %s"
+	errIntConversionPort      = "error during port conversion to int: %s"
+)
 
 type Peer struct {
 	PublicKey []byte
@@ -31,16 +48,17 @@ type Interface struct {
 	Name       string
 	privateKey []byte
 	LocalPeer  Peer
+	retries    int
 }
 
 func NewInterface(b Backend, ifname string, endpoint string, ipaddr string, privateKeyPath string) (*Interface, error) {
 	hostPort := strings.Split(endpoint, ":")
 	if len(hostPort) != 2 {
-		return nil, fmt.Errorf("endpoint must be in format <ip>:<port>, like 192.168.1.3:3459")
+		return nil, fmt.Errorf(errEndpointFormatNotValid)
 	}
 
 	if net.ParseIP(hostPort[0]) == nil {
-		return nil, fmt.Errorf("endpoint provided is not valid")
+		return nil, fmt.Errorf(errInvalidEndpoint)
 	}
 
 	if err := validatePort(hostPort[1]); err != nil {
@@ -50,7 +68,7 @@ func NewInterface(b Backend, ifname string, endpoint string, ipaddr string, priv
 	// Check that the passed interface name is ok for the kernel
 	// https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/tree/include/uapi/linux/if.h?h=v4.14.36#n33
 	if len(ifname) > ifnamesiz {
-		return nil, fmt.Errorf("the interface name size cannot be more than %d", ifnamesiz)
+		return nil, fmt.Errorf(errInterfaceNameLength)
 	}
 
 	if _, err := os.Stat(privateKeyPath); os.IsNotExist(err) {
@@ -61,14 +79,14 @@ func NewInterface(b Backend, ifname string, endpoint string, ipaddr string, priv
 
 		err = ioutil.WriteFile(privateKeyPath, privKey, 0600)
 		if err != nil {
-			return nil, fmt.Errorf("error writing private key file: %s", err.Error())
+			return nil, fmt.Errorf(errPrivateKeyWriting, err.Error())
 		}
 	}
 
 	privKey, err := ioutil.ReadFile(privateKeyPath)
 
 	if err != nil {
-		return nil, fmt.Errorf("error opening private key file: %s", err.Error())
+		return nil, fmt.Errorf(errPrivateKeyOpening, err.Error())
 	}
 
 	pubKey, err := wireguard.ExtractPubKey(privKey)
@@ -125,18 +143,31 @@ func (i *Interface) addressAlreadyTaken() (bool, error) {
 	return false, nil
 }
 
+func (i *Interface) retryConnection(reason string) error {
+	log.Printf("Retry connect, reason: %s", reason)
+	time.Sleep(retryttl)
+	i.retries = i.retries + 1
+	if i.retries > maxretries-1 {
+		return fmt.Errorf("%s: Last error: %s", errMaxRetriesReached, reason)
+	}
+	err := i.Connect()
+
+	if err != nil {
+		i.retries = 0
+	}
+
+	return err
+}
+
 func (i *Interface) Connect() error {
-restart:
 	taken, err := i.addressAlreadyTaken()
 
 	if err != nil {
-		log.Printf("Error during the first connection: %s, Retry in 5 seconds.", err.Error())
-		time.Sleep(time.Second * 5)
-		goto restart
+		return i.retryConnection(err.Error())
 	}
 
 	if taken {
-		return fmt.Errorf("address already taken: %s", *i.LocalPeer.IP)
+		return fmt.Errorf(errAddressAlreadyTaken, *i.LocalPeer.IP)
 	}
 
 	// Join
@@ -150,15 +181,13 @@ restart:
 	for {
 		workingPeers, err := i.Backend.GetPeers(i.Name)
 		if err != nil {
-			log.Printf("Error extracting getting peers from backend: %s. Retry in 5 seconds", err.Error())
-			time.Sleep(time.Second * 5)
-			continue
+			return i.retryConnection(fmt.Sprintf("problem during extraction of peers from the backend: %s", err.Error()))
 		}
 
 		// We don't change anything if the peers remain the same
 		newPeersSHA := extractPeersSHA(workingPeers)
 		if newPeersSHA == peersSHA {
-			time.Sleep(time.Second * 5)
+			time.Sleep(peercheckttl)
 			continue
 		}
 		log.Println("The peer list changed, reconfiguring...")
@@ -180,21 +209,20 @@ restart:
 		}
 		err = netlink.LinkAdd(wirelink)
 		if err != nil {
-			return fmt.Errorf("error adding the wireguard link: %s", err.Error())
+			return i.retryConnection(fmt.Sprintf(errAddLink, err.Error()))
 		}
 
 		// Add the actual address to the link
 		addr, err := netlink.ParseAddr(fmt.Sprintf("%s/24", i.LocalPeer.IP.String()))
 		if err != nil {
-			return fmt.Errorf("error parsing the new ip address: %s", err.Error())
+			return i.retryConnection(fmt.Sprintf("error parsing the new ip address: %s", err.Error()))
 		}
 
 		// Configure wireguard
-		// TODO(fntlnz) how do we assign the external ip address?
 		s := strings.Split(i.LocalPeer.Endpoint, ":")
 		port, err := strconv.Atoi(s[1])
 		if err != nil {
-			return fmt.Errorf("error during port conversion to int: %s", err.Error())
+			return fmt.Errorf(errIntConversionPort, err.Error())
 		}
 		conf := wireguard.Configuration{
 			Interface: wireguard.Interface{
@@ -218,7 +246,7 @@ restart:
 		_, err = wireguard.SetConf(i.Name, conf)
 
 		if err != nil {
-			return err
+			return i.retryConnection(err.Error())
 		}
 
 		netlink.AddrAdd(wirelink, addr)
