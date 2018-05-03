@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/influxdata/wirey/backend"
 	"github.com/spf13/cobra"
@@ -34,7 +35,18 @@ var rootCmd = &cobra.Command{
 		endpoint := viper.GetString("endpoint")
 		endpointPort := viper.GetString("endpoint-port")
 		ipAddr := viper.GetString("ipaddr")
-		i, err := backend.NewInterface(b, ifname, fmt.Sprintf("%s:%s", endpoint, endpointPort), ipAddr, privateKeyPath)
+		peerDiscoveryTTL, err := time.ParseDuration(viper.GetString("peerdiscoveryttl"))
+		if err != nil {
+			log.Fatalf("The passed duration cannot be parsed: %s", err.Error())
+		}
+		i, err := backend.NewInterface(
+			b,
+			ifname,
+			fmt.Sprintf("%s:%s", endpoint, endpointPort),
+			ipAddr,
+			privateKeyPath,
+			peerDiscoveryTTL,
+		)
 
 		if err != nil {
 			log.Fatal(err)
@@ -62,8 +74,11 @@ func backendFactory() (backend.Backend, error) {
 			return nil, err
 		}
 		httpBackendBasicAuth := viper.GetString("httpbasicauth")
-		if len(httpBackendBasicAuth) > 2 {
+		if len(httpBackendBasicAuth) > 0 {
 			splitted := strings.Split(httpBackendBasicAuth, ":")
+			if len(splitted) != 2 {
+				return nil, fmt.Errorf("the provided basic auth credentials are not in format username:password")
+			}
 			username, password := splitted[0], splitted[1]
 			b.BasicAuth = &backend.BasicAuth{
 				Username: username,
@@ -95,6 +110,7 @@ func init() {
 	pflags.String("httpbasicauth", "", "basic auth for the http backend, in form username:password")
 	pflags.String("ifname", "wg0", "the name to use for the interface (must be the same in all the peers)")
 	pflags.String("ipaddr", "", "the ip for this node inside the tunnel, e.g: 10.0.0.3")
+	pflags.String("peerdiscoveryttl", "5s", "the time to wait to discover new peers using the configured backend")
 	pflags.String("privatekeypath", "/etc/wirey/privkey", "the local path where to load the private key from, if empty, a private key will be generated.")
 
 	rootCmd.MarkFlagRequired("endpoint")
@@ -108,6 +124,7 @@ func init() {
 	viper.BindPFlag("ifname", pflags.Lookup("ifname"))
 	viper.BindPFlag("ipaddr", pflags.Lookup("ipaddr"))
 	viper.BindPFlag("privatekeypath", pflags.Lookup("privatekeypath"))
+	viper.BindPFlag("peerdiscoveryttl", pflags.Lookup("peerdiscoveryttl"))
 
 	viper.SetEnvPrefix("wirey")
 	viper.AutomaticEnv()

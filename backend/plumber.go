@@ -19,10 +19,9 @@ import (
 )
 
 const (
-	ifnamesiz    = 16
-	maxretries   = 5
-	retryttl     = time.Second * 5
-	peercheckttl = time.Second * 5
+	ifnamesiz  = 16
+	maxretries = 5
+	retryttl   = time.Second * 5
 )
 
 const (
@@ -44,14 +43,22 @@ type Peer struct {
 }
 
 type Interface struct {
-	Backend    Backend
-	Name       string
-	privateKey []byte
-	LocalPeer  Peer
-	retries    int
+	Backend      Backend
+	Name         string
+	PeerCheckTTL time.Duration
+	LocalPeer    Peer
+	privateKey   []byte
+	retries      int
 }
 
-func NewInterface(b Backend, ifname string, endpoint string, ipaddr string, privateKeyPath string) (*Interface, error) {
+func NewInterface(
+	b Backend,
+	ifname string,
+	endpoint string,
+	ipaddr string,
+	privateKeyPath string,
+	peerCheckTTL time.Duration,
+) (*Interface, error) {
 	hostPort := strings.Split(endpoint, ":")
 	if len(hostPort) != 2 {
 		return nil, fmt.Errorf(errEndpointFormatNotValid)
@@ -95,9 +102,10 @@ func NewInterface(b Backend, ifname string, endpoint string, ipaddr string, priv
 	}
 	ipnet := net.ParseIP(ipaddr)
 	return &Interface{
-		Backend:    b,
-		Name:       ifname,
-		privateKey: privKey,
+		Backend:      b,
+		Name:         ifname,
+		PeerCheckTTL: peerCheckTTL,
+		privateKey:   privKey,
 		LocalPeer: Peer{
 			PublicKey: pubKey,
 			IP:        &ipnet,
@@ -187,7 +195,7 @@ func (i *Interface) Connect() error {
 		// We don't change anything if the peers remain the same
 		newPeersSHA := extractPeersSHA(workingPeers)
 		if newPeersSHA == peersSHA {
-			time.Sleep(peercheckttl)
+			time.Sleep(i.PeerCheckTTL)
 			continue
 		}
 		log.Println("The peer list changed, reconfiguring...")
