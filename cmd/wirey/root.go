@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+var Version string
+
 var rootCmd = &cobra.Command{
 	Use:   "wirey",
 	Short: "manage local wireguard interfaces in a distributed system",
@@ -69,7 +71,7 @@ func backendFactory() (backend.Backend, error) {
 
 	httpBackend := viper.GetString("http")
 	if len(httpBackend) != 0 {
-		b, err := backend.NewHTTPBackend(httpBackend)
+		b, err := backend.NewHTTPBackend(httpBackend, Version)
 		if err != nil {
 			return nil, err
 		}
@@ -110,7 +112,7 @@ func init() {
 	pflags.String("httpbasicauth", "", "basic auth for the http backend, in form username:password")
 	pflags.String("ifname", "wg0", "the name to use for the interface (must be the same in all the peers)")
 	pflags.String("ipaddr", "", "the ip for this node inside the tunnel, e.g: 10.0.0.3")
-	pflags.String("peerdiscoveryttl", "5s", "the time to wait to discover new peers using the configured backend")
+	pflags.String("peerdiscoveryttl", "30s", "the time to wait to discover new peers using the configured backend")
 	pflags.String("privatekeypath", "/etc/wirey/privkey", "the local path where to load the private key from, if empty, a private key will be generated.")
 
 	rootCmd.MarkFlagRequired("endpoint")
