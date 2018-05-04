@@ -10,17 +10,21 @@ import (
 	"time"
 )
 
+const httpUserAgent = "wirey"
+
 type BasicAuth struct {
 	Username string
 	Password string
 }
+
 type HTTPBackend struct {
-	client    *http.Client
-	baseurl   string
-	BasicAuth *BasicAuth
+	client       *http.Client
+	baseurl      string
+	BasicAuth    *BasicAuth
+	wireyVersion string
 }
 
-func NewHTTPBackend(baseurl string) (*HTTPBackend, error) {
+func NewHTTPBackend(baseurl, wireyVersion string) (*HTTPBackend, error) {
 	var transportWithTimeout = &http.Transport{
 		Dial: (&net.Dialer{
 			Timeout: 5 * time.Second,
@@ -32,7 +36,8 @@ func NewHTTPBackend(baseurl string) (*HTTPBackend, error) {
 			Timeout:   time.Second * 10,
 			Transport: transportWithTimeout,
 		},
-		baseurl: baseurl,
+		baseurl:      baseurl,
+		wireyVersion: wireyVersion,
 	}, nil
 }
 
@@ -49,6 +54,7 @@ func (b *HTTPBackend) Join(ifname string, p Peer) error {
 	if err != nil {
 		return err
 	}
+
 	buf := bytes.NewBuffer(jsonPeer)
 	req, err := http.NewRequest("POST", joinURL, buf)
 	if err != nil {
@@ -56,9 +62,7 @@ func (b *HTTPBackend) Join(ifname string, p Peer) error {
 	}
 	req.Header.Add("Content-Type", "application/json")
 
-	if b.BasicAuth != nil {
-		req.SetBasicAuth(b.BasicAuth.Username, b.BasicAuth.Password)
-	}
+	injectCommonHeaders(req, b.wireyVersion, b.BasicAuth)
 
 	res, err := b.client.Do(req)
 	if err != nil {
@@ -79,9 +83,7 @@ func (b *HTTPBackend) GetPeers(ifname string) ([]Peer, error) {
 		return nil, err
 	}
 
-	if b.BasicAuth != nil {
-		req.SetBasicAuth(b.BasicAuth.Username, b.BasicAuth.Password)
-	}
+	injectCommonHeaders(req, b.wireyVersion, b.BasicAuth)
 
 	res, err := b.client.Do(req)
 	if err != nil {
@@ -100,4 +102,12 @@ func (b *HTTPBackend) GetPeers(ifname string) ([]Peer, error) {
 	}
 
 	return peers, nil
+}
+
+func injectCommonHeaders(req *http.Request, wireyVersion string, basicAuth *BasicAuth) {
+	req.Header.Add("User-Agent", fmt.Sprintf("%s/%s", httpUserAgent, wireyVersion))
+
+	if basicAuth != nil {
+		req.SetBasicAuth(basicAuth.Username, basicAuth.Password)
+	}
 }
