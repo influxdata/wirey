@@ -10,3 +10,5 @@ build:
 	mkdir -p bin
 	go build ${LDFLAGS} -o bin/wirey ./cmd/wirey
 
+test:
+	go test -v ./...

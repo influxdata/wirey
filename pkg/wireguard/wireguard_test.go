@@ -41,6 +41,7 @@ PublicKey = Rg3XQfzH0LWuUBy/MHZxMcCLxiMaE5BS1hY/pncQ0G4=
 AllowedIPs = 10.0.0.1/32
 Endpoint = 172.31.23.163:50113
 
+
 [Peer]
 PublicKey = nAMY8gSy32B7rLV8kiLq4GKJBbYT3amT+c0DI5vikik=
 AllowedIPs = 10.0.0.2/32
