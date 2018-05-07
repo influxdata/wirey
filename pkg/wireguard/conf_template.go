@@ -6,7 +6,7 @@ PrivateKey = {{ .Interface.PrivateKey }}
 {{ range .Peers }}
 
 [Peer]
+PublicKey = {{ .PublicKey }}
 AllowedIPs = {{ .AllowedIPs }}
 Endpoint = {{ .Endpoint }}
-PublicKey = {{ .PublicKey }}
 {{ end }}`
