@@ -4,8 +4,9 @@ jobs:
     docker:
       - image: circleci/golang:1.10
 
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    working_directory: /go/src/github.com/influxdata/wirey
     steps:
       - checkout
+      - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
       - run: dep ensure --vendor-only
       - run: go test -v ./...
