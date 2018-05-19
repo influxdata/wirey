@@ -1,103 +1,69 @@
-package wireguard
+package main
 
+/*
+#include <stdint.h>
+#include <string.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef uint8_t wg_key[32];
+typedef char wg_key_b64_string[((sizeof(wg_key) + 2) / 3) * 4 + 1];
+extern void wg_generate_private_key(wg_key private_key);
+extern void wg_key_to_base64(wg_key_b64_string base64, const wg_key key);
+extern void wg_generate_public_key(wg_key public_key, const wg_key private_key);
+extern int wg_add_device(const char *device_name);
+
+void add() {
+	const char *ifname = "wg0";
+	wg_add_device(ifname);
+}
+*/
+import "C"
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"text/template"
+	"unsafe"
 )
 
-type Interface struct {
-	ListenPort int
-	PrivateKey string
+func genkey() string {
+	key := C.CString("")
+	//defer C.free(unsafe.Pointer(key))
+	wkey := (*C.uchar)(unsafe.Pointer(key))
+	C.wg_generate_private_key(wkey)
+
+	b64 := C.CString("")
+	//defer C.free(unsafe.Pointer(b64))
+	C.wg_key_to_base64(b64, wkey)
+	return C.GoString(b64)
 }
 
-type Peer struct {
-	PublicKey  string
-	AllowedIPs string
-	Endpoint   string
+func genpubkey(privatekey string) string {
+	key := C.CString("")
+	//defer C.free(unsafe.Pointer(key))
+	wkey := (*C.uchar)(unsafe.Pointer(key))
+
+	C.wg_generate_public_key(wkey, (*C.uchar)(unsafe.Pointer(C.CString(privatekey))))
+
+	b64 := C.CString("")
+	//defer C.free(unsafe.Pointer(b64))
+	C.wg_key_to_base64(b64, wkey)
+
+	return C.GoString(b64)
 }
 
-type Configuration struct {
-	Interface Interface
-	Peers     []Peer
+func addDevice() {
+	// TODO(fntlnz): find a way to pass name
+	C.add()
+	errStr := C.CString("error detected")
+	//defer C.free(unsafe.Pointer(errStr))
+	C.perror(errStr)
 }
 
-const (
-	errorWiregurdNotFound = "the wireguard (wg) command is not available in your PATH"
-)
+func main() {
 
-func wg(stdin io.Reader, arg ...string) ([]byte, error) {
-	path, err := exec.LookPath("wg")
-	if err != nil {
-		return nil, fmt.Errorf(errorWiregurdNotFound)
-	}
-
-	cmd := exec.Command(path, arg...)
-
-	cmd.Stdin = stdin
-	var buf bytes.Buffer
-	cmd.Stderr = &buf
-	output, err := cmd.Output()
-
-	if err != nil {
-		return nil, fmt.Errorf("%s - %s", err.Error(), buf.String())
-	}
-	return output, nil
-
-}
-
-func Genkey() ([]byte, error) {
-	result, err := wg(nil, "genkey")
-	if err != nil {
-		return nil, fmt.Errorf("error generating the private key for wireguard: %s", err.Error())
-	}
-	return result, nil
-}
-
-func ExtractPubKey(privateKey []byte) ([]byte, error) {
-	stdin := bytes.NewReader(privateKey)
-	result, err := wg(stdin, "pubkey")
-	if err != nil {
-		return nil, fmt.Errorf("error extracting the public key: %s", err.Error())
-	}
-	return result, nil
-}
-
-func SetConf(ifname string, conf Configuration) ([]byte, error) {
-	cfile, err := ioutil.TempFile("", "wgconfig")
-	if err != nil {
-		return nil, err
-	}
-	defer os.Remove(cfile.Name())
-	rendered, err := RenderConfiguration(conf)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := cfile.Write(rendered); err != nil {
-		return nil, err
-	}
-
-	result, err := wg(nil, "setconf", "wg0", cfile.Name())
-
-	if err != nil {
-		return nil, fmt.Errorf("error setting the configuration for wireguard: %s", err.Error())
-	}
-	return result, nil
-}
-
-func RenderConfiguration(conf Configuration) ([]byte, error) {
-	t := template.Must(template.New("config").Parse(confTemplate))
-	buf := &bytes.Buffer{}
-
-	err := t.Execute(buf, conf)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
+	addDevice()
+	priv := genkey()
+	pub := genpubkey(priv)
+	fmt.Printf("priv: %s\n", priv)
+	fmt.Printf("pub: %s\n", pub)
 }
