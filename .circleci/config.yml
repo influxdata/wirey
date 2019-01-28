@@ -2,11 +2,10 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.10
+      - image: circleci/golang:1.11
 
     working_directory: /go/src/github.com/influxdata/wirey
     steps:
       - checkout
-      - run: curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-      - run: dep ensure --vendor-only
-      - run: go test -v ./...
+      - run: GO111MODULE=on go mod vendor
+      - run: GO111MODULE=on go test -v ./...
