@@ -24,10 +24,12 @@ require (
 	github.com/hashicorp/hcl v0.0.0-20180404174102-ef8a98b0bbce // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
+	github.com/libopenstorage/openstorage v7.0.0+incompatible
 	github.com/magiconair/properties v1.7.6 // indirect
 	github.com/mitchellh/mapstructure v0.0.0-20180220230111-00c29f56e238 // indirect
 	github.com/pelletier/go-toml v1.1.0 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
+	github.com/portworx/kvdb v0.0.0-20190218073322-521b74b01592
 	github.com/prometheus/client_golang v0.9.2 // indirect
 	github.com/prometheus/client_model v0.0.0-20190115171406-56726106282f // indirect
 	github.com/sirupsen/logrus v1.3.0 // indirect
