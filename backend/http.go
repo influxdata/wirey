@@ -12,11 +12,13 @@ import (
 
 const httpUserAgent = "wirey"
 
+// BasicAuth ...
 type BasicAuth struct {
 	Username string
 	Password string
 }
 
+// HTTPBackend ...
 type HTTPBackend struct {
 	client       *http.Client
 	baseurl      string
@@ -24,6 +26,7 @@ type HTTPBackend struct {
 	wireyVersion string
 }
 
+// NewHTTPBackend ...
 func NewHTTPBackend(baseurl, wireyVersion string) (*HTTPBackend, error) {
 	var transportWithTimeout = &http.Transport{
 		Dial: (&net.Dialer{
@@ -47,6 +50,7 @@ func publicKeySHA256(key []byte) string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
+// Join ...
 func (b *HTTPBackend) Join(ifname string, p Peer) error {
 	joinURL := fmt.Sprintf("%s/%s/%s", b.baseurl, ifname, publicKeySHA256(p.PublicKey))
 
@@ -75,6 +79,7 @@ func (b *HTTPBackend) Join(ifname string, p Peer) error {
 	return nil
 }
 
+// GetPeers ...
 func (b *HTTPBackend) GetPeers(ifname string) ([]Peer, error) {
 	getPeersURL := fmt.Sprintf("%s/%s", b.baseurl, ifname)
 

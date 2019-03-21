@@ -37,12 +37,14 @@ const (
 	errIntConversionPort      = "error during port conversion to int: %s"
 )
 
+// Peer ...
 type Peer struct {
 	PublicKey []byte
 	Endpoint  string
 	IP        *net.IP
 }
 
+// Interface ...
 type Interface struct {
 	Backend      Backend
 	Name         string
@@ -52,6 +54,7 @@ type Interface struct {
 	retries      int
 }
 
+// NewInterface ...
 func NewInterface(
 	b Backend,
 	ifname string,
@@ -168,6 +171,7 @@ func (i *Interface) retryConnection(reason string) error {
 	return err
 }
 
+// Connect ...
 func (i *Interface) Connect() error {
 	taken, err := i.addressAlreadyTaken()
 
@@ -268,8 +272,6 @@ func (i *Interface) Connect() error {
 
 		log.Println("Link up")
 	}
-
-	return nil
 }
 
 func validatePort(port string) error {
