@@ -9,10 +9,12 @@ import (
 	"time"
 
 	"wirey/backend"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
+// Version ...
 var Version string
 
 var rootCmd = &cobra.Command{
@@ -69,6 +71,16 @@ func backendFactory() (backend.Backend, error) {
 		return b, nil
 	}
 
+	// consul backend
+	consulBackend := viper.GetStringSlice("consul")
+	if len(consulBackend) > 0 {
+		b, err := backend.NewConsulBackend(consulBackend)
+		if err != nil {
+			return nil, err
+		}
+		return b, nil
+	}
+
 	httpBackend := viper.GetString("http")
 	if len(httpBackend) != 0 {
 		b, err := backend.NewHTTPBackend(httpBackend, Version)
@@ -90,7 +102,7 @@ func backendFactory() (backend.Backend, error) {
 		return b, nil
 	}
 
-	return nil, fmt.Errorf("No storage backend selected, available backends: [etcd, http]")
+	return nil, fmt.Errorf("No storage backend selected, available backends: [etcd, consul, http]")
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -108,6 +120,7 @@ func init() {
 	pflags.String("endpoint", "", "endpoint for this machine, e.g: 192.168.1.3")
 	pflags.String("endpoint-port", "2345", "endpoint port for this machine")
 	pflags.StringSlice("etcd", nil, "array of etcd servers to connect to")
+	pflags.StringSlice("consul", nil, "array of consul servers to connect to")
 	pflags.String("http", "", "the http backend endpoint to use as backend, see also httpbasicauth if you need basic authentication")
 	pflags.String("httpbasicauth", "", "basic auth for the http backend, in form username:password")
 	pflags.String("ifname", "wg0", "the name to use for the interface (must be the same in all the peers)")
@@ -121,6 +134,7 @@ func init() {
 	viper.BindPFlag("endpoint", pflags.Lookup("endpoint"))
 	viper.BindPFlag("endpoint-port", pflags.Lookup("endpoint-port"))
 	viper.BindPFlag("etcd", pflags.Lookup("etcd"))
+	viper.BindPFlag("consul", pflags.Lookup("consul"))
 	viper.BindPFlag("http", pflags.Lookup("http"))
 	viper.BindPFlag("httpbasicauth", pflags.Lookup("httpbasicauth"))
 	viper.BindPFlag("ifname", pflags.Lookup("ifname"))
