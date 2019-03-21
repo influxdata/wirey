@@ -3,8 +3,9 @@ package backend
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"strings"
+
+	"wirey/pkg/utils"
 
 	"github.com/hashicorp/consul/api"
 )
@@ -45,7 +46,7 @@ func (e *ConsulBackend) Join(ifname string, p Peer) error {
 
 	_, err = kvc.Put(
 		&api.KVPair{
-			Key:   fmt.Sprintf("%s/%s/%s", consulWireyPrefix, ifname, url.QueryEscape(string(p.PublicKey))),
+			Key:   fmt.Sprintf("%s/%s/%s", consulWireyPrefix, ifname, utils.PublicKeySHA256(p.PublicKey)),
 			Value: pj,
 		},
 		nil,

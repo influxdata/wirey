@@ -2,12 +2,12 @@ package backend
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
 	"time"
+	"wirey/pkg/utils"
 )
 
 const httpUserAgent = "wirey"
@@ -44,15 +44,9 @@ func NewHTTPBackend(baseurl, wireyVersion string) (*HTTPBackend, error) {
 	}, nil
 }
 
-func publicKeySHA256(key []byte) string {
-	h := sha256.New()
-	h.Write(key)
-	return fmt.Sprintf("%x", h.Sum(nil))
-}
-
 // Join ...
 func (b *HTTPBackend) Join(ifname string, p Peer) error {
-	joinURL := fmt.Sprintf("%s/%s/%s", b.baseurl, ifname, publicKeySHA256(p.PublicKey))
+	joinURL := fmt.Sprintf("%s/%s/%s", b.baseurl, ifname, utils.PublicKeySHA256(p.PublicKey))
 
 	jsonPeer, err := json.Marshal(p)
 	if err != nil {
