@@ -60,25 +60,28 @@ func (e *ConsulBackend) Join(ifname string, p Peer) error {
 // GetPeers ...
 func (e *ConsulBackend) GetPeers(ifname string) ([]Peer, error) {
 	kvc := e.client.KV()
-	_, _, err := kvc.Get(fmt.Sprintf("%s/%s", consulWireyPrefix, ifname), nil)
+	res, _, err := kvc.List(fmt.Sprintf("%s/%s", consulWireyPrefix, ifname), nil)
 	if err != nil {
 		return nil, err
 	}
 
 	peers := []Peer{}
-	/*
-		for _, v := range res.Key {
-			fmt.Printf("%+v", v)
 
-				peer := Peer{}
+	if res == nil {
+		return peers, nil
+	}
 
-					err = json.Unmarshal(v.Value, &peer)
-					if err != nil {
-						return nil, err
-					}
-					peers = append(peers, peer)
+	for _, v := range res {
+		peer := Peer{}
 
+		err = json.Unmarshal(v.Value, &peer)
+		if err != nil {
+			return nil, err
 		}
-	*/
+
+		peers = append(peers, peer)
+
+	}
+
 	return peers, nil
 }
