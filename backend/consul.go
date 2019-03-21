@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"wirey/pkg/utils"
+	"github.com/influxdata/wirey/pkg/utils"
 
 	"github.com/hashicorp/consul/api"
 )

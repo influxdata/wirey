@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"wirey/pkg/wireguard"
+	"github.com/influxdata/wirey/pkg/wireguard"
 
 	"github.com/vishvananda/netlink"
 )

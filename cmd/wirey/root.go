@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"wirey/backend"
+	"github.com/influxdata/wirey/backend"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

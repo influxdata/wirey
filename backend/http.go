@@ -7,7 +7,8 @@ import (
 	"net"
 	"net/http"
 	"time"
-	"wirey/pkg/utils"
+
+	"github.com/influxdata/wirey/pkg/utils"
 )
 
 const httpUserAgent = "wirey"

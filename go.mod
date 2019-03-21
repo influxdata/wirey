@@ -1,4 +1,4 @@
-module wirey
+module github.com/influxdata/wirey
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
@@ -23,12 +23,11 @@ require (
 	github.com/hashicorp/serf v0.8.2 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
-	github.com/libopenstorage/openstorage v7.0.0+incompatible
 	github.com/magiconair/properties v1.7.6 // indirect
+	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v0.0.0-20180220230111-00c29f56e238 // indirect
 	github.com/pelletier/go-toml v1.1.0 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
-	github.com/portworx/kvdb v0.0.0-20190218073322-521b74b01592
 	github.com/prometheus/client_golang v0.9.2 // indirect
 	github.com/prometheus/client_model v0.0.0-20190115171406-56726106282f // indirect
 	github.com/sirupsen/logrus v1.3.0 // indirect
@@ -52,4 +51,5 @@ require (
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
 	google.golang.org/genproto v0.0.0-20180413175816-7fd901a49ba6 // indirect
 	google.golang.org/grpc v1.11.3 // indirect
+	launchpad.net/gocheck v0.0.0-20140225173054-000000000087 // indirect
 )
