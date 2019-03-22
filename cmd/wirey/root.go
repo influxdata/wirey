@@ -122,6 +122,12 @@ func backendFactory() (backend.Backend, error) {
 
 	// consul backend
 	if len(consulBackend) > 0 {
+
+		consulBackend, err := socktmpl.Parse(consulBackend)
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		b, err := backend.NewConsulBackend(fmt.Sprintf("%s:%d", consulBackend, consulPortBackend))
 		if err != nil {
 			return nil, err
@@ -169,7 +175,7 @@ func init() {
 	pflags.String("endpoint-port", "2345", "endpoint port for this machine")
 	pflags.StringSlice("etcd", nil, "array of etcd servers to connect to")
 	pflags.Int("etcd-port", 2379, "etcd port number")
-	pflags.IP("consul", nil, "consul server to connect to, e.g: 127.0.0.1")
+	pflags.String("consul", "", "consul server to connect to, e.g: 127.0.0.1")
 	pflags.Int("consul-port", 8500, "consul port number")
 	pflags.String("http", "", "the http backend endpoint to use as backend, see also httpbasicauth if you need basic authentication")
 	pflags.Int("http-port", 80, "http port number")
