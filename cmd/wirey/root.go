@@ -4,12 +4,14 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/influxdata/wirey/backend"
+	"github.com/influxdata/wirey/pkg/utils"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -40,6 +42,13 @@ var rootCmd = &cobra.Command{
 		endpoint := viper.GetString("endpoint")
 		endpointPort := viper.GetString("endpoint-port")
 		ipAddr := viper.GetString("ipaddr")
+
+		// Is endpoint an ip address or a interface name?
+		addr := net.ParseIP(endpoint)
+		if addr == nil {
+			endpoint = fmt.Sprintf("%s", utils.GetIPv4ForInterfaceName(endpoint))
+		}
+
 		peerDiscoveryTTL, err := time.ParseDuration(viper.GetString("peerdiscoveryttl"))
 		if err != nil {
 			log.Fatalf("The passed duration cannot be parsed: %s", err.Error())
