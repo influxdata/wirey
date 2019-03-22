@@ -1,22 +1,22 @@
 package backend
 
 import (
-	"io/ioutil"
 	"log"
+	"os"
 
 	"github.com/hashicorp/go-discover"
 )
 
 // DiscoverNodes ...
-func DiscoverNodes() ([]string, error) {
+func DiscoverNodes(discoverConf string) ([]string, error) {
 	// support discovery for all supported providers
 	cloudDiscover := discover.Discover{}
 
 	// use ioutil.Discard for no log output
-	log := log.New(ioutil.Discard, "", 0)
+	//log := log.New(ioutil.Discard, "", 0)
+	log := log.New(os.Stderr, "", log.LstdFlags)
 
-	cloudProvider := "provider=aws region=eu-west-1 ..."
-	res, err := cloudDiscover.Addrs(cloudProvider, log)
+	res, err := cloudDiscover.Addrs(discoverConf, log)
 
 	if err != nil {
 		return nil, err

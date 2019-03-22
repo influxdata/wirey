@@ -3,7 +3,6 @@ package backend
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/influxdata/wirey/pkg/utils"
 
@@ -20,10 +19,12 @@ type ConsulBackend struct {
 }
 
 // NewConsulBackend ...
-func NewConsulBackend(endpoints []string) (*ConsulBackend, error) {
+func NewConsulBackend(endpoint string) (*ConsulBackend, error) {
 
 	config := api.DefaultConfig()
-	config.Address = strings.Join(endpoints, " ")
+	config.Address = endpoint
+
+	fmt.Printf("Connecting to Consul on %s\n", config.Address)
 
 	cli, err := api.NewClient(config)
 	if err != nil {
