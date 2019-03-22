@@ -14,10 +14,10 @@ func PublicKeySHA256(key []byte) string {
 }
 
 // GetIPv4ForInterfaceName returns interface ip from interface name
-func GetIPv4ForInterfaceName(ifname string) (ifaceip net.IP) {
+func GetIPv4ForInterfaceName(ifName string) (ifaceip net.IP) {
 	interfaces, _ := net.Interfaces()
 	for _, inter := range interfaces {
-		if inter.Name == ifname {
+		if inter.Name == ifName {
 			if addrs, err := inter.Addrs(); err == nil {
 				for _, addr := range addrs {
 					switch ip := addr.(type) {
@@ -31,4 +31,15 @@ func GetIPv4ForInterfaceName(ifname string) (ifaceip net.IP) {
 		}
 	}
 	return (nil)
+}
+
+// GetInterfaceIP receives an interface name and returns it's ip address
+func GetInterfaceIP(endpoint string) string {
+	// Is endpoint an ip address or a interface name?
+	addr := net.ParseIP(endpoint)
+	if addr == nil {
+		endpoint = fmt.Sprintf("%s", GetIPv4ForInterfaceName(endpoint))
+	}
+
+	return endpoint
 }

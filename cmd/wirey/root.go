@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"net"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	socktmpl "github.com/hashicorp/go-sockaddr/template"
 	"github.com/influxdata/wirey/backend"
-	"github.com/influxdata/wirey/pkg/utils"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -43,10 +42,14 @@ var rootCmd = &cobra.Command{
 		endpointPort := viper.GetString("endpoint-port")
 		ipAddr := viper.GetString("ipaddr")
 
-		// Is endpoint an ip address or a interface name?
-		addr := net.ParseIP(endpoint)
-		if addr == nil {
-			endpoint = fmt.Sprintf("%s", utils.GetIPv4ForInterfaceName(endpoint))
+		endpoint, err = socktmpl.Parse(endpoint)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		ipAddr, err = socktmpl.Parse(ipAddr)
+		if err != nil {
+			log.Fatal(err)
 		}
 
 		peerDiscoveryTTL, err := time.ParseDuration(viper.GetString("peerdiscoveryttl"))

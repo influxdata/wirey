@@ -2,6 +2,7 @@ module github.com/influxdata/wirey
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/coreos/bbolt v1.3.0 // indirect
 	github.com/coreos/etcd v3.3.12+incompatible // indirect
@@ -19,15 +20,19 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-discover v0.0.0-20190319153616-61771d82ff54
 	github.com/hashicorp/go-rootcerts v1.0.0 // indirect
+	github.com/hashicorp/go-sockaddr v1.0.2
 	github.com/hashicorp/hcl v0.0.0-20180404174102-ef8a98b0bbce // indirect
 	github.com/hashicorp/serf v0.8.2 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/magiconair/properties v1.7.6 // indirect
+	github.com/mattn/go-colorable v0.1.1 // indirect
+	github.com/mattn/go-isatty v0.0.7 // indirect
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v0.0.0-20180220230111-00c29f56e238 // indirect
 	github.com/pelletier/go-toml v1.1.0 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
+	github.com/posener/complete v1.2.1 // indirect
 	github.com/prometheus/client_golang v0.9.2 // indirect
 	github.com/prometheus/client_model v0.0.0-20190115171406-56726106282f // indirect
 	github.com/sirupsen/logrus v1.3.0 // indirect
@@ -48,6 +53,7 @@ require (
 	go.uber.org/multierr v1.1.0 // indirect
 	go.uber.org/zap v1.9.1 // indirect
 	golang.org/x/crypto v0.0.0-20190128193316-c7b33c32a30b // indirect
+	golang.org/x/sys v0.0.0-20190322080309-f49334f85ddc // indirect
 	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
 	google.golang.org/genproto v0.0.0-20180413175816-7fd901a49ba6 // indirect
 	google.golang.org/grpc v1.11.3 // indirect
