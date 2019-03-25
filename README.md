@@ -10,6 +10,7 @@ Each machine should be able to see the same distributed backend in order to join
 ## Implemented backends
 
 - etcd
+- consul
 - http(s) - with optional basic auth
 
 ### ETCD
@@ -24,6 +25,20 @@ Example usage:
 
 ```bash
 ./bin/wirey --endpoint 192.168.33.11 --ipaddr 172.30.0.4 --etcd 192.168.33.10:2379
+```
+
+### CONSUL
+
+The consul backend is useful when you want to use consul to synchronize wireguard peers.
+
+Example usage:
+
+- endpoint: the listen ip address on the current machine
+- ipaddr: the ip address you want to assign to the interface
+- consul ip from the consul server
+
+```bash
+./bin/wirey --endpoint 192.168.33.11 --ipaddr 172.30.0.4 --consul 192.168.33.10
 ```
 
 ### HTTP(s) with optional basic auth
