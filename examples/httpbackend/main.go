@@ -44,7 +44,6 @@ func joinHandler(s *Store) func(http.ResponseWriter, *http.Request) {
 		peer := Peer{}
 		err := d.Decode(&peer)
 		if err != nil {
-			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -66,7 +65,6 @@ func getPeersHandler(s *Store) func(http.ResponseWriter, *http.Request) {
 		resBody, err := json.Marshal(list)
 
 		if err != nil {
-			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
