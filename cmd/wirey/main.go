@@ -1,5 +1,9 @@
 package main
 
+import (
+	"wirey/cmd/wirey/command"
+)
+
 func main() {
-	Execute()
+	command.Execute()
 }

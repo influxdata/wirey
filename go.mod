@@ -1,4 +1,4 @@
-module github.com/influxdata/wirey
+module wirey
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
@@ -24,6 +24,7 @@ require (
 	github.com/hashicorp/hcl v0.0.0-20180404174102-ef8a98b0bbce // indirect
 	github.com/hashicorp/serf v0.8.2 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
+	github.com/influxdata/wirey v0.3.0
 	github.com/jonboulle/clockwork v0.1.0 // indirect
 	github.com/magiconair/properties v1.7.6 // indirect
 	github.com/mattn/go-colorable v0.1.1 // indirect
