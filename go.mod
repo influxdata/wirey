@@ -2,6 +2,7 @@ module wirey
 
 require (
 	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/Sirupsen/logrus v1.0.6
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/coreos/bbolt v1.3.0 // indirect
@@ -29,6 +30,7 @@ require (
 	github.com/magiconair/properties v1.7.6 // indirect
 	github.com/mattn/go-colorable v0.1.1 // indirect
 	github.com/mattn/go-isatty v0.0.7 // indirect
+	github.com/mitchellh/go-homedir v1.0.0
 	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v0.0.0-20180220230111-00c29f56e238 // indirect
 	github.com/pelletier/go-toml v1.1.0 // indirect

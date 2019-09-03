@@ -2,15 +2,16 @@ package command
 
 import (
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
-	socktmpl "github.com/hashicorp/go-sockaddr/template"
 	"wirey/backend"
+
+	log "github.com/Sirupsen/logrus"
+	socktmpl "github.com/hashicorp/go-sockaddr/template"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -18,6 +19,8 @@ import (
 
 // Version ...
 var Version string
+
+var cfgFile string
 
 var rootCmd = &cobra.Command{
 	Use:   "wirey",
@@ -42,11 +45,13 @@ var rootCmd = &cobra.Command{
 		endpointPort := viper.GetString("endpoint-port")
 		ipAddr := viper.GetString("ipaddr")
 
+		// Endpoint
 		endpoint, err = socktmpl.Parse(endpoint)
 		if err != nil {
 			log.Fatal(err)
 		}
 
+		// IP Address
 		ipAddr, err = socktmpl.Parse(ipAddr)
 		if err != nil {
 			log.Fatal(err)
@@ -79,6 +84,7 @@ func backendFactory() (backend.Backend, error) {
 	etcdPortBackend := viper.GetInt("etcd-port")
 	consulBackend := viper.GetString("consul")
 	consulPortBackend := viper.GetInt("consul-port")
+	consulTokenBackend := viper.GetString("consul-token")
 	httpBackend := viper.GetString("http")
 	//httpPortBackend := viper.GetInt("http-port")
 	discoverConf := viper.GetString("discover")
@@ -128,7 +134,10 @@ func backendFactory() (backend.Backend, error) {
 			log.Fatal(err)
 		}
 
-		b, err := backend.NewConsulBackend(fmt.Sprintf("%s:%d", consulBackend, consulPortBackend))
+		b, err := backend.NewConsulBackend(
+			fmt.Sprintf("%s:%d", consulBackend, consulPortBackend),
+			consulTokenBackend,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -163,20 +172,25 @@ func backendFactory() (backend.Backend, error) {
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
 		os.Exit(1)
 	}
 }
 
 func init() {
 
+	// Initialize configuration file
+	cobra.OnInitialize(initConfig)
+
 	pflags := rootCmd.PersistentFlags()
+	pflags.StringVar(&cfgFile, "config", "", "config file (default is ./wirey.yml)")
 	pflags.String("endpoint", "", "endpoint for this machine, e.g: 192.168.1.3")
 	pflags.String("endpoint-port", "2345", "endpoint port for this machine")
 	pflags.StringSlice("etcd", nil, "array of etcd servers to connect to")
 	pflags.Int("etcd-port", 2379, "etcd port number")
 	pflags.String("consul", "", "consul server to connect to, e.g: 127.0.0.1")
 	pflags.Int("consul-port", 8500, "consul port number")
+	pflags.String("consul-address", "", "consul address (overrides host and port)")
+	pflags.String("consul-token", "", "consul acl token")
 	pflags.String("http", "", "the http backend endpoint to use as backend, see also httpbasicauth if you need basic authentication")
 	pflags.Int("http-port", 80, "http port number")
 	pflags.String("httpbasicauth", "", "basic auth for the http backend, in form username:password")
@@ -195,6 +209,8 @@ func init() {
 	viper.BindPFlag("etcd-port", pflags.Lookup("etcd-port"))
 	viper.BindPFlag("consul", pflags.Lookup("consul"))
 	viper.BindPFlag("consul-port", pflags.Lookup("consul-port"))
+	viper.BindPFlag("consul-address", pflags.Lookup("consul-address"))
+	viper.BindPFlag("consul-token", pflags.Lookup("consul-token"))
 	viper.BindPFlag("http", pflags.Lookup("http"))
 	viper.BindPFlag("http-port", pflags.Lookup("http-port"))
 	viper.BindPFlag("httpbasicauth", pflags.Lookup("httpbasicauth"))
@@ -207,4 +223,20 @@ func init() {
 	viper.SetEnvPrefix("wirey")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+}
+
+func initConfig() {
+	// Don't forget to read config either from cfgFile or from home directory!
+	if cfgFile != "" {
+		// Use config file from the flag.
+		viper.SetConfigFile(cfgFile)
+	} else {
+		viper.AddConfigPath(".")
+		viper.SetConfigType("json")
+		viper.SetConfigName("wirey")
+	}
+
+	if err := viper.ReadInConfig(); err != nil {
+		log.Warn(err)
+	}
 }
