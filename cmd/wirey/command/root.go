@@ -1,4 +1,4 @@
-package main
+package command
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"time"
 
 	socktmpl "github.com/hashicorp/go-sockaddr/template"
-	"github.com/influxdata/wirey/backend"
+	"wirey/backend"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
