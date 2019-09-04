@@ -195,6 +195,8 @@ func (i *Interface) Connect() error {
 	}
 
 	peersSHA := ""
+	allowedIps := ""
+
 	for {
 		workingPeers, err := i.Backend.GetPeers(i.Name)
 		if err != nil {
@@ -254,9 +256,15 @@ func (i *Interface) Connect() error {
 				continue
 			}
 
+			if len(p.AllowedIPs) > 0 {
+				allowedIps = fmt.Sprintf("%s/32,%s", p.IP.String(), strings.Join(p.AllowedIPs[:], ","))
+			} else {
+				allowedIps = fmt.Sprintf("%s/32", p.IP.String())
+			}
+
 			conf.Peers = append(conf.Peers, wireguard.Peer{
 				PublicKey:  string(p.PublicKey),
-				AllowedIPs: fmt.Sprintf("%s/32,%s", p.IP.String(), strings.Join(p.AllowedIPs[:], ",")),
+				AllowedIPs: allowedIps,
 				Endpoint:   p.Endpoint,
 			})
 		}
