@@ -40,9 +40,10 @@ const (
 
 // Peer ...
 type Peer struct {
-	PublicKey []byte
-	Endpoint  string
-	IP        *net.IP
+	PublicKey  []byte
+	Endpoint   string
+	IP         *net.IP
+	AllowedIPs []string
 }
 
 // Interface ...
@@ -63,6 +64,7 @@ func NewInterface(
 	ipaddr string,
 	privateKeyPath string,
 	peerCheckTTL time.Duration,
+	allowedIPs []string,
 ) (*Interface, error) {
 	hostPort := strings.Split(endpoint, ":")
 	if len(hostPort) != 2 {
@@ -112,9 +114,10 @@ func NewInterface(
 		PeerCheckTTL: peerCheckTTL,
 		privateKey:   privKey,
 		LocalPeer: Peer{
-			PublicKey: pubKey,
-			IP:        &ipnet,
-			Endpoint:  endpoint,
+			PublicKey:  pubKey,
+			IP:         &ipnet,
+			Endpoint:   endpoint,
+			AllowedIPs: allowedIPs,
 		},
 	}, nil
 }
@@ -250,9 +253,10 @@ func (i *Interface) Connect() error {
 			if bytes.Equal(p.PublicKey, i.LocalPeer.PublicKey) {
 				continue
 			}
+
 			conf.Peers = append(conf.Peers, wireguard.Peer{
 				PublicKey:  string(p.PublicKey),
-				AllowedIPs: fmt.Sprintf("%s/32", p.IP.String()),
+				AllowedIPs: fmt.Sprintf("%s/32,%s", p.IP.String(), strings.Join(p.AllowedIPs[:], ",")),
 				Endpoint:   p.Endpoint,
 			})
 		}

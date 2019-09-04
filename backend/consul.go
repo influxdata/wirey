@@ -29,31 +29,7 @@ func NewConsulBackend(endpoint string, token string) (*ConsulBackend, error) {
 		config.Token = token
 	}
 
-	// check if TLS is required
-	/*
-		if p.options[kvdb.TransportScheme] == "https" {
-			tlsConfig := &api.TLSConfig{
-				CAFile:             p.options[kvdb.CAFileKey],
-				CertFile:           p.options[kvdb.CertFileKey],
-				KeyFile:            p.options[kvdb.CertKeyFileKey],
-				Address:            p.options[kvdb.CAAuthAddress],
-				InsecureSkipVerify: strings.ToLower(p.options[kvdb.InsecureSkipVerify]) == "true",
-			}
-
-			consulTLSConfig, err := api.SetupTLSConfig(tlsConfig)
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			config.Scheme = p.options[kvdb.TransportScheme]
-			config.HttpClient = new(http.Client)
-			config.HttpClient.Transport = &http.Transport{
-				TLSClientConfig: consulTLSConfig,
-			}
-		}
-	*/
-
-	log.Infof("Connecting to Consul on %s\n", config.Address)
+	log.Infof("consul: connecting to %s\n", config.Address)
 
 	cli, err := api.NewClient(config)
 	if err != nil {
@@ -81,7 +57,7 @@ func (e *ConsulBackend) Join(ifname string, p Peer) error {
 
 	kvc := e.client.KV()
 
-	log.Debugf("Inserting key on %s/%s/%s\n", consulWireyPrefix, ifname, utils.PublicKeySHA256(p.PublicKey))
+	log.Debugf("consul: inserting key on %s/%s/%s\n", consulWireyPrefix, ifname, utils.PublicKeySHA256(p.PublicKey))
 
 	_, err = kvc.Put(
 		&api.KVPair{
@@ -119,7 +95,7 @@ func (e *ConsulBackend) GetPeers(ifname string) ([]Peer, error) {
 			return nil, err
 		}
 
-		log.Debugf("Detected endpoint (peer) with address %s\n", peer.Endpoint)
+		log.Debugf("consul: detected endpoint (peer) with address %s\n", peer.Endpoint)
 
 		peers = append(peers, peer)
 
