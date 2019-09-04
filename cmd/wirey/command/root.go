@@ -3,6 +3,7 @@ package command
 import (
 	"fmt"
 	"math/rand"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -10,7 +11,6 @@ import (
 
 	"wirey/backend"
 
-	"github.com/Sirupsen/logrus"
 	log "github.com/Sirupsen/logrus"
 	socktmpl "github.com/hashicorp/go-sockaddr/template"
 
@@ -58,10 +58,27 @@ var rootCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
+		// Check peer discovery ttl
 		peerDiscoveryTTL, err := time.ParseDuration(viper.GetString("peerdiscoveryttl"))
 		if err != nil {
-			log.Fatalf("The passed duration cannot be parsed: %s", err.Error())
+			log.Fatalf("The passed duration (peerdiscoveryttl) cannot be parsed: %s", err.Error())
 		}
+
+		// Allowed IPs
+		allowedIps := viper.GetStringSlice("allowedips")
+		allowedIpsList := make([]string, 0)
+
+		for _, v := range allowedIps {
+			_, _, err := net.ParseCIDR(v)
+
+			if err != nil {
+				log.Errorf("Not valid allowed ip. %s\n", err)
+				continue
+			}
+
+			allowedIpsList = append(allowedIpsList, v)
+		}
+
 		i, err := backend.NewInterface(
 			b,
 			ifname,
@@ -69,6 +86,7 @@ var rootCmd = &cobra.Command{
 			ipAddr,
 			privateKeyPath,
 			peerDiscoveryTTL,
+			allowedIps,
 		)
 
 		if err != nil {
@@ -184,8 +202,8 @@ func Execute() {
 
 func init() {
 
-	logger := logrus.New()
-	logger.Formatter = &logrus.JSONFormatter{}
+	logger := log.New()
+	logger.Formatter = &log.JSONFormatter{}
 
 	// Use logrus for standard log output
 	// Note that `log` here references stdlib's log
@@ -213,6 +231,7 @@ func init() {
 	pflags.String("peerdiscoveryttl", "30s", "the time to wait to discover new peers using the configured backend")
 	pflags.String("privatekeypath", "/etc/wirey/privkey", "the local path where to load the private key from, if empty, a private key will be generated.")
 	pflags.String("discover", "", "discover configuration from the provider. e.g: provider=aws region=eu-west-1 ... Check go-discover for all the options.")
+	pflags.StringSlice("allowedips", nil, "array of allowed ips")
 
 	rootCmd.MarkFlagRequired("endpoint")
 	rootCmd.MarkFlagRequired("ipaddr")
@@ -233,6 +252,7 @@ func init() {
 	viper.BindPFlag("privatekeypath", pflags.Lookup("privatekeypath"))
 	viper.BindPFlag("peerdiscoveryttl", pflags.Lookup("peerdiscoveryttl"))
 	viper.BindPFlag("discover", pflags.Lookup("discover"))
+	viper.BindPFlag("allowedips", pflags.Lookup("allowedips"))
 
 	viper.SetEnvPrefix("wirey")
 	viper.AutomaticEnv()
