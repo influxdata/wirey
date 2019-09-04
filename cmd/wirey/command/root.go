@@ -10,6 +10,7 @@ import (
 
 	"wirey/backend"
 
+	"github.com/Sirupsen/logrus"
 	log "github.com/Sirupsen/logrus"
 	socktmpl "github.com/hashicorp/go-sockaddr/template"
 
@@ -84,6 +85,7 @@ func backendFactory() (backend.Backend, error) {
 	etcdPortBackend := viper.GetInt("etcd-port")
 	consulBackend := viper.GetString("consul")
 	consulPortBackend := viper.GetInt("consul-port")
+	consulAddressBackend := viper.GetString("consul-address")
 	consulTokenBackend := viper.GetString("consul-token")
 	httpBackend := viper.GetString("http")
 	//httpPortBackend := viper.GetInt("http-port")
@@ -127,15 +129,19 @@ func backendFactory() (backend.Backend, error) {
 	}
 
 	// consul backend
-	if len(consulBackend) > 0 {
+	if len(consulBackend) > 0 || len(consulAddressBackend) > 0 {
 
 		consulBackend, err := socktmpl.Parse(consulBackend)
 		if err != nil {
 			log.Fatal(err)
 		}
 
+		if consulAddressBackend == "" {
+			consulAddressBackend = fmt.Sprintf("%s:%d", consulBackend, consulPortBackend)
+		}
+
 		b, err := backend.NewConsulBackend(
-			fmt.Sprintf("%s:%d", consulBackend, consulPortBackend),
+			consulAddressBackend,
 			consulTokenBackend,
 		)
 		if err != nil {
@@ -177,6 +183,14 @@ func Execute() {
 }
 
 func init() {
+
+	logger := logrus.New()
+	logger.Formatter = &logrus.JSONFormatter{}
+
+	// Use logrus for standard log output
+	// Note that `log` here references stdlib's log
+	// Not logrus imported under the name `log`.
+	log.SetOutput(logger.Writer())
 
 	// Initialize configuration file
 	cobra.OnInitialize(initConfig)
