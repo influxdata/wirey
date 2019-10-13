@@ -11,7 +11,7 @@ import (
 
 	"wirey/backend"
 
-	log "github.com/Sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 	socktmpl "github.com/hashicorp/go-sockaddr/template"
 
 	"github.com/spf13/cobra"
