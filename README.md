@@ -36,6 +36,9 @@ Example usage:
 - endpoint: the listen ip address on the current machine
 - ipaddr: the ip address you want to assign to the interface
 - consul ip from the consul server
+- consul-port is the port from consul server
+- consul-address overrides consul ip and port
+- consul-token is the token used for consul authentication
 
 ```bash
 ./bin/wirey --endpoint 192.168.33.11 --ipaddr 172.30.0.4 --consul 192.168.33.10
@@ -252,4 +255,27 @@ Result:
 /wirey/wg0/59Je0kMsYkWkQ52Rt7o9Ss60QP3fTcoTQgJgsWDW/QQ=
 
 {"PublicKey":"NTlKZTBrTXNZa1drUTUyUnQ3bzlTczYwUVAzZlRjb1RRZ0pnc1dEVy9RUT0K","Endpoint":"192.168.33.12:2345","IP":"172.30.0.11"}
+```
+
+### Sample configuration file
+
+wirey.json
+```
+{
+    "endpoint": "{{ GetPrivateIP }}",
+    "endpoint-port": "51820",
+    "etcd": "",
+    "etcd-port": "",
+    "consul": "",
+    "consul-port": "",
+    "consul-address": "",
+    "consul-token": "",
+    "http": "",
+    "http-port": "",
+    "httpbasicauth": "",
+    "ifname": "wg0",
+    "ipaddr": "172.30.0.1",
+    "discover": "",
+    "allowedips": ""
+}
 ```
