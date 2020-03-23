@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"sort"
@@ -14,7 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/influxdata/wirey/pkg/wireguard"
+	log "github.com/sirupsen/logrus"
+
+	"wirey/pkg/wireguard"
+
 	"github.com/vishvananda/netlink"
 )
 
@@ -36,12 +38,15 @@ const (
 	errIntConversionPort      = "error during port conversion to int: %s"
 )
 
+// Peer ...
 type Peer struct {
-	PublicKey []byte
-	Endpoint  string
-	IP        *net.IP
+	PublicKey  []byte
+	Endpoint   string
+	IP         *net.IP
+	AllowedIPs []string
 }
 
+// Interface ...
 type Interface struct {
 	Backend      Backend
 	Name         string
@@ -51,6 +56,7 @@ type Interface struct {
 	retries      int
 }
 
+// NewInterface ...
 func NewInterface(
 	b Backend,
 	ifname string,
@@ -58,6 +64,7 @@ func NewInterface(
 	ipaddr string,
 	privateKeyPath string,
 	peerCheckTTL time.Duration,
+	allowedIPs []string,
 ) (*Interface, error) {
 	hostPort := strings.Split(endpoint, ":")
 	if len(hostPort) != 2 {
@@ -107,9 +114,10 @@ func NewInterface(
 		PeerCheckTTL: peerCheckTTL,
 		privateKey:   privKey,
 		LocalPeer: Peer{
-			PublicKey: pubKey,
-			IP:        &ipnet,
-			Endpoint:  endpoint,
+			PublicKey:  pubKey,
+			IP:         &ipnet,
+			Endpoint:   endpoint,
+			AllowedIPs: allowedIPs,
 		},
 	}, nil
 }
@@ -167,6 +175,7 @@ func (i *Interface) retryConnection(reason string) error {
 	return err
 }
 
+// Connect ...
 func (i *Interface) Connect() error {
 	taken, err := i.addressAlreadyTaken()
 
@@ -186,6 +195,8 @@ func (i *Interface) Connect() error {
 	}
 
 	peersSHA := ""
+	allowedIps := ""
+
 	for {
 		workingPeers, err := i.Backend.GetPeers(i.Name)
 		if err != nil {
@@ -244,9 +255,16 @@ func (i *Interface) Connect() error {
 			if bytes.Equal(p.PublicKey, i.LocalPeer.PublicKey) {
 				continue
 			}
+
+			if len(p.AllowedIPs) > 0 {
+				allowedIps = fmt.Sprintf("%s/32,%s", p.IP.String(), strings.Join(p.AllowedIPs[:], ","))
+			} else {
+				allowedIps = fmt.Sprintf("%s/32", p.IP.String())
+			}
+
 			conf.Peers = append(conf.Peers, wireguard.Peer{
 				PublicKey:  string(p.PublicKey),
-				AllowedIPs: fmt.Sprintf("%s/32", p.IP.String()),
+				AllowedIPs: allowedIps,
 				Endpoint:   p.Endpoint,
 			})
 		}
@@ -267,8 +285,6 @@ func (i *Interface) Connect() error {
 
 		log.Println("Link up")
 	}
-
-	return nil
 }
 
 func validatePort(port string) error {

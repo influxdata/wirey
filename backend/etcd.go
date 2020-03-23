@@ -6,17 +6,19 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/coreos/etcd/clientv3"
+	"go.etcd.io/etcd/clientv3"
 )
 
 const (
 	etcdWireyPrefix = "/wirey"
 )
 
+// EtcdBackend ...
 type EtcdBackend struct {
 	client *clientv3.Client
 }
 
+// NewEtcdBackend ...
 func NewEtcdBackend(endpoints []string) (*EtcdBackend, error) {
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
@@ -30,6 +32,7 @@ func NewEtcdBackend(endpoints []string) (*EtcdBackend, error) {
 	}, nil
 }
 
+// Join ...
 func (e *EtcdBackend) Join(ifname string, p Peer) error {
 	pj, err := json.Marshal(p)
 
@@ -46,6 +49,7 @@ func (e *EtcdBackend) Join(ifname string, p Peer) error {
 	return nil
 }
 
+// GetPeers ...
 func (e *EtcdBackend) GetPeers(ifname string) ([]Peer, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	kvc := clientv3.NewKV(e.client)

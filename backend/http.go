@@ -2,21 +2,24 @@ package backend
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
 	"time"
+
+	"wirey/pkg/utils"
 )
 
 const httpUserAgent = "wirey"
 
+// BasicAuth ...
 type BasicAuth struct {
 	Username string
 	Password string
 }
 
+// HTTPBackend ...
 type HTTPBackend struct {
 	client       *http.Client
 	baseurl      string
@@ -24,6 +27,7 @@ type HTTPBackend struct {
 	wireyVersion string
 }
 
+// NewHTTPBackend ...
 func NewHTTPBackend(baseurl, wireyVersion string) (*HTTPBackend, error) {
 	var transportWithTimeout = &http.Transport{
 		Dial: (&net.Dialer{
@@ -41,14 +45,9 @@ func NewHTTPBackend(baseurl, wireyVersion string) (*HTTPBackend, error) {
 	}, nil
 }
 
-func publicKeySHA256(key []byte) string {
-	h := sha256.New()
-	h.Write(key)
-	return fmt.Sprintf("%x", h.Sum(nil))
-}
-
+// Join ...
 func (b *HTTPBackend) Join(ifname string, p Peer) error {
-	joinURL := fmt.Sprintf("%s/%s/%s", b.baseurl, ifname, publicKeySHA256(p.PublicKey))
+	joinURL := fmt.Sprintf("%s/%s/%s", b.baseurl, ifname, utils.PublicKeySHA256(p.PublicKey))
 
 	jsonPeer, err := json.Marshal(p)
 	if err != nil {
@@ -75,6 +74,7 @@ func (b *HTTPBackend) Join(ifname string, p Peer) error {
 	return nil
 }
 
+// GetPeers ...
 func (b *HTTPBackend) GetPeers(ifname string) ([]Peer, error) {
 	getPeersURL := fmt.Sprintf("%s/%s", b.baseurl, ifname)
 
