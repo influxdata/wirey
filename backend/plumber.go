@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"os"
 	"sort"
@@ -15,27 +16,31 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"wirey/pkg/wireguard"
-
+	"github.com/cenkalti/backoff/v4"
 	"github.com/vishvananda/netlink"
+	"wirey/pkg/wireguard"
 )
 
 const (
-	ifnamesiz  = 16
-	maxretries = 5
-	retryttl   = time.Second * 5
+	ifnamesiz = 16
 )
 
 const (
-	errMaxRetriesReached      = "maximum number of connection retries reached"
 	errEndpointFormatNotValid = "endpoint must be in format <ip>:<port>, like 192.168.1.3:3459"
 	errInvalidEndpoint        = "endpoint provided is not valid"
-	errInterfaceNameLength    = "the interface name size cannot be more than " + string(ifnamesiz)
+	errInterfaceNameLength    = "the interface name size cannot be more than"
 	errPrivateKeyWriting      = "error writing private key file: %s"
 	errPrivateKeyOpening      = "error opening private key file: %s"
 	errAddressAlreadyTaken    = "address already taken: %s"
 	errAddLink                = "error adding the wireguard link: %s"
 	errIntConversionPort      = "error during port conversion to int: %s"
+)
+
+// values used for exponentialBackoff
+const (
+	MaxElapsedTime = 15 * time.Minute
+	MaxInterval    = 120 * time.Second
+	JitterRange    = 5
 )
 
 // Peer ...
@@ -82,7 +87,7 @@ func NewInterface(
 	// Check that the passed interface name is ok for the kernel
 	// https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/tree/include/uapi/linux/if.h?h=v4.14.36#n33
 	if len(ifname) > ifnamesiz {
-		return nil, fmt.Errorf(errInterfaceNameLength)
+		return nil, fmt.Errorf(errInterfaceNameLength + " %d", ifnamesiz)
 	}
 
 	if _, err := os.Stat(privateKeyPath); os.IsNotExist(err) {
@@ -160,16 +165,26 @@ func (i *Interface) addressAlreadyTaken() (bool, error) {
 }
 
 func (i *Interface) retryConnection(reason string) error {
-	log.Printf("Retry connect, reason: %s", reason)
-	time.Sleep(retryttl)
-	i.retries = i.retries + 1
-	if i.retries > maxretries-1 {
-		return fmt.Errorf("%s: Last error: %s", errMaxRetriesReached, reason)
-	}
-	err := i.Connect()
+	rand.Seed(time.Now().UnixNano())
+	initialInterval := rand.Intn(JitterRange) + 1
+	exp := backoff.NewExponentialBackOff()
+	exp.MaxElapsedTime = MaxElapsedTime
+	exp.MaxInterval = MaxInterval
+	exp.MaxElapsedTime = MaxElapsedTime
+	exp.InitialInterval = time.Duration(initialInterval)
 
-	if err == nil {
-		i.retries = 0
+	notify := func(err error, time time.Duration) {
+		fmt.Printf("wirey connection error %+v, retrying in %s", err, time)
+	}
+
+	connect := func() error {
+		return i.Connect()
+	}
+
+	err := backoff.RetryNotify(connect, exp, notify)
+
+	if err != nil {
+		return fmt.Errorf("wirey failed to connect %+v", err)
 	}
 
 	return err
@@ -212,10 +227,10 @@ func (i *Interface) Connect() error {
 		log.Println("The peer list changed, reconfiguring...")
 		peersSHA = newPeersSHA
 
-		log.Println("Delete old link")
 		// delete any old link
 		link, _ := netlink.LinkByName(i.Name)
 		if link != nil {
+			log.Println("Delete old link")
 			netlink.LinkDel(link)
 		}
 

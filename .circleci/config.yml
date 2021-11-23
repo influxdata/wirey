@@ -2,10 +2,11 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.12
+      - image: circleci/golang:1.16
 
     working_directory: /go/src/github.com/influxdata/wirey
     steps:
       - checkout
-      - run: GO111MODULE=on go mod vendor
-      - run: GO111MODULE=on go test -v ./...
+      - run: go mod vendor
+      - run: make test
+      - run: make build

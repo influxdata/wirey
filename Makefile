@@ -5,6 +5,10 @@ LDFLAGS=-ldflags "-s -X main.Version=${GIT_COMMIT}"
 
 all: build
 
+.PHONY: clean
+clean:
+	$(RM) -r bin/
+
 .PHONY: build
 build:
 	mkdir -p bin
