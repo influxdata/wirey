@@ -164,42 +164,29 @@ func (i *Interface) addressAlreadyTaken() (bool, error) {
 	return false, nil
 }
 
-func (i *Interface) retryConnection(reason string) error {
+// Connect ...
+func (i *Interface) Connect() error {
 	rand.Seed(time.Now().UnixNano())
 	initialInterval := rand.Intn(JitterRange) + 1
 	exp := backoff.NewExponentialBackOff()
 	exp.MaxElapsedTime = MaxElapsedTime
 	exp.MaxInterval = MaxInterval
-	exp.MaxElapsedTime = MaxElapsedTime
-	exp.InitialInterval = time.Duration(initialInterval)
+	exp.InitialInterval = time.Duration(initialInterval) * time.Second
 
 	notify := func(err error, time time.Duration) {
-		fmt.Printf("wirey connection error %+v, retrying in %s", err, time)
+		fmt.Printf("wirey error %+v, retrying in %s\n", err, time)
 	}
-
-	connect := func() error {
-		return i.Connect()
-	}
-
-	err := backoff.RetryNotify(connect, exp, notify)
+	err := backoff.RetryNotify(func() error {
+		taken, err := i.addressAlreadyTaken()
+		if taken {
+			exp.MaxElapsedTime = backoff.Stop
+			return fmt.Errorf(errAddressAlreadyTaken, *i.LocalPeer.IP)
+		}
+		return err
+	}, exp, notify)
 
 	if err != nil {
-		return fmt.Errorf("wirey failed to connect %+v", err)
-	}
-
-	return err
-}
-
-// Connect ...
-func (i *Interface) Connect() error {
-	taken, err := i.addressAlreadyTaken()
-
-	if err != nil {
-		return i.retryConnection(err.Error())
-	}
-
-	if taken {
-		return fmt.Errorf(errAddressAlreadyTaken, *i.LocalPeer.IP)
+		return fmt.Errorf("error %+v", err)
 	}
 
 	// Join
@@ -213,10 +200,14 @@ func (i *Interface) Connect() error {
 	allowedIps := ""
 
 	for {
-		workingPeers, err := i.Backend.GetPeers(i.Name)
-		if err != nil {
-			return i.retryConnection(fmt.Sprintf("problem during extraction of peers from the backend: %s", err.Error()))
-		}
+		var workingPeers []Peer
+		err := backoff.RetryNotify(func() error {
+			workingPeers, err = i.Backend.GetPeers(i.Name)
+			if err != nil {
+				return fmt.Errorf("problem during extraction of peers from backend: %s", err)
+			}
+			return err
+		}, exp, notify)
 
 		// We don't change anything if the peers remain the same
 		newPeersSHA := extractPeersSHA(workingPeers)
@@ -243,13 +234,15 @@ func (i *Interface) Connect() error {
 		}
 		err = netlink.LinkAdd(wirelink)
 		if err != nil {
-			return i.retryConnection(fmt.Sprintf(errAddLink, err.Error()))
+			fmt.Printf(errAddLink, err.Error())
+			return i.Connect()
 		}
 
 		// Add the actual address to the link
 		addr, err := netlink.ParseAddr(fmt.Sprintf("%s/24", i.LocalPeer.IP.String()))
 		if err != nil {
-			return i.retryConnection(fmt.Sprintf("error parsing the new ip address: %s", err.Error()))
+			fmt.Printf("error parsing the new ip address: %s", err.Error())
+			return i.Connect()
 		}
 
 		// Configure wireguard
@@ -287,7 +280,7 @@ func (i *Interface) Connect() error {
 		_, err = wireguard.SetConf(i.Name, conf)
 
 		if err != nil {
-			return i.retryConnection(err.Error())
+			return i.Connect()
 		}
 
 		netlink.AddrAdd(wirelink, addr)
