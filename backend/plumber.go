@@ -174,7 +174,7 @@ func (i *Interface) Connect() error {
 	exp.InitialInterval = time.Duration(initialInterval) * time.Second
 
 	notify := func(err error, time time.Duration) {
-		fmt.Printf("wirey error %+v, retrying in %s\n", err, time)
+		log.Warnf("wirey error %+v, retrying in %s\n", err, time)
 	}
 	err := backoff.RetryNotify(func() error {
 		taken, err := i.addressAlreadyTaken()
@@ -215,13 +215,13 @@ func (i *Interface) Connect() error {
 			time.Sleep(i.PeerCheckTTL)
 			continue
 		}
-		log.Println("The peer list changed, reconfiguring...")
+		log.Infoln("The peer list changed, reconfiguring...")
 		peersSHA = newPeersSHA
 
 		// delete any old link
 		link, _ := netlink.LinkByName(i.Name)
 		if link != nil {
-			log.Println("Delete old link")
+			log.Infoln("Delete old link")
 			netlink.LinkDel(link)
 		}
 
@@ -234,14 +234,14 @@ func (i *Interface) Connect() error {
 		}
 		err = netlink.LinkAdd(wirelink)
 		if err != nil {
-			fmt.Printf(errAddLink, err.Error())
+			log.Infof(errAddLink, err.Error())
 			return i.Connect()
 		}
 
 		// Add the actual address to the link
 		addr, err := netlink.ParseAddr(fmt.Sprintf("%s/24", i.LocalPeer.IP.String()))
 		if err != nil {
-			fmt.Printf("error parsing the new ip address: %s", err.Error())
+			log.Infof("error parsing the new ip address: %s", err.Error())
 			return i.Connect()
 		}
 

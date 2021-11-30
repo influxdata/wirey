@@ -202,13 +202,8 @@ func Execute() {
 
 func init() {
 
-	logger := log.New()
-	logger.Formatter = &log.JSONFormatter{}
-
-	// Use logrus for standard log output
-	// Note that `log` here references stdlib's log
-	// Not logrus imported under the name `log`.
-	log.SetOutput(logger.Writer())
+	log.SetFormatter(&log.JSONFormatter{})
+	log.SetOutput(os.Stdout)
 
 	// Initialize configuration file
 	cobra.OnInitialize(initConfig)
