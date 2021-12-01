@@ -227,6 +227,7 @@ func init() {
 	pflags.String("privatekeypath", "/etc/wirey/privkey", "the local path where to load the private key from, if empty, a private key will be generated.")
 	pflags.String("discover", "", "discover configuration from the provider. e.g: provider=aws region=eu-west-1 ... Check go-discover for all the options.")
 	pflags.StringSlice("allowedips", nil, "array of allowed ips")
+	pflags.String("log-level", "warn", "logging level to be used panic, fatal, error, trace, debug, warn, info")
 
 	rootCmd.MarkFlagRequired("endpoint")
 	rootCmd.MarkFlagRequired("ipaddr")
@@ -248,10 +249,17 @@ func init() {
 	viper.BindPFlag("peerdiscoveryttl", pflags.Lookup("peerdiscoveryttl"))
 	viper.BindPFlag("discover", pflags.Lookup("discover"))
 	viper.BindPFlag("allowedips", pflags.Lookup("allowedips"))
+	viper.BindPFlag("log-level", pflags.Lookup("log-level"))
 
 	viper.SetEnvPrefix("wirey")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	level, err := log.ParseLevel(viper.GetString("log-level"))
+	if err != nil {
+		log.Warn(err)
+	}
+	log.SetLevel(level)
 }
 
 func initConfig() {

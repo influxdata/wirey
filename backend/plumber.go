@@ -212,6 +212,7 @@ func (i *Interface) Connect() error {
 		// We don't change anything if the peers remain the same
 		newPeersSHA := extractPeersSHA(workingPeers)
 		if newPeersSHA == peersSHA {
+			log.Debugf("Peers matched, sleeping for %s \n", i.PeerCheckTTL)
 			time.Sleep(i.PeerCheckTTL)
 			continue
 		}
