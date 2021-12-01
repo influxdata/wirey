@@ -11,8 +11,8 @@ import (
 
 	"wirey/backend"
 
-	log "github.com/sirupsen/logrus"
 	socktmpl "github.com/hashicorp/go-sockaddr/template"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -202,13 +202,8 @@ func Execute() {
 
 func init() {
 
-	logger := log.New()
-	logger.Formatter = &log.JSONFormatter{}
-
-	// Use logrus for standard log output
-	// Note that `log` here references stdlib's log
-	// Not logrus imported under the name `log`.
-	log.SetOutput(logger.Writer())
+	log.SetFormatter(&log.JSONFormatter{})
+	log.SetOutput(os.Stdout)
 
 	// Initialize configuration file
 	cobra.OnInitialize(initConfig)
@@ -232,6 +227,7 @@ func init() {
 	pflags.String("privatekeypath", "/etc/wirey/privkey", "the local path where to load the private key from, if empty, a private key will be generated.")
 	pflags.String("discover", "", "discover configuration from the provider. e.g: provider=aws region=eu-west-1 ... Check go-discover for all the options.")
 	pflags.StringSlice("allowedips", nil, "array of allowed ips")
+	pflags.String("log-level", "warn", "logging level to be used panic, fatal, error, trace, debug, warn, info")
 
 	rootCmd.MarkFlagRequired("endpoint")
 	rootCmd.MarkFlagRequired("ipaddr")
@@ -253,10 +249,17 @@ func init() {
 	viper.BindPFlag("peerdiscoveryttl", pflags.Lookup("peerdiscoveryttl"))
 	viper.BindPFlag("discover", pflags.Lookup("discover"))
 	viper.BindPFlag("allowedips", pflags.Lookup("allowedips"))
+	viper.BindPFlag("log-level", pflags.Lookup("log-level"))
 
 	viper.SetEnvPrefix("wirey")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+
+	level, err := log.ParseLevel(viper.GetString("log-level"))
+	if err != nil {
+		log.Warn(err)
+	}
+	log.SetLevel(level)
 }
 
 func initConfig() {

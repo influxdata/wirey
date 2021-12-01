@@ -6,8 +6,8 @@ import (
 
 	"wirey/pkg/utils"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/hashicorp/consul/api"
+	log "github.com/sirupsen/logrus"
 )
 
 const (

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net"
 	"os"
 	"sort"
@@ -15,27 +16,31 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"wirey/pkg/wireguard"
-
+	"github.com/cenkalti/backoff/v4"
 	"github.com/vishvananda/netlink"
+	"wirey/pkg/wireguard"
 )
 
 const (
-	ifnamesiz  = 16
-	maxretries = 5
-	retryttl   = time.Second * 5
+	ifnamesiz = 16
 )
 
 const (
-	errMaxRetriesReached      = "maximum number of connection retries reached"
 	errEndpointFormatNotValid = "endpoint must be in format <ip>:<port>, like 192.168.1.3:3459"
 	errInvalidEndpoint        = "endpoint provided is not valid"
-	errInterfaceNameLength    = "the interface name size cannot be more than " + string(ifnamesiz)
+	errInterfaceNameLength    = "the interface name size cannot be more than"
 	errPrivateKeyWriting      = "error writing private key file: %s"
 	errPrivateKeyOpening      = "error opening private key file: %s"
 	errAddressAlreadyTaken    = "address already taken: %s"
 	errAddLink                = "error adding the wireguard link: %s"
 	errIntConversionPort      = "error during port conversion to int: %s"
+)
+
+// values used for exponentialBackoff
+const (
+	MaxElapsedTime = 15 * time.Minute
+	MaxInterval    = 120 * time.Second
+	JitterRange    = 5
 )
 
 // Peer ...
@@ -82,7 +87,7 @@ func NewInterface(
 	// Check that the passed interface name is ok for the kernel
 	// https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/tree/include/uapi/linux/if.h?h=v4.14.36#n33
 	if len(ifname) > ifnamesiz {
-		return nil, fmt.Errorf(errInterfaceNameLength)
+		return nil, fmt.Errorf(errInterfaceNameLength + " %d", ifnamesiz)
 	}
 
 	if _, err := os.Stat(privateKeyPath); os.IsNotExist(err) {
@@ -159,32 +164,29 @@ func (i *Interface) addressAlreadyTaken() (bool, error) {
 	return false, nil
 }
 
-func (i *Interface) retryConnection(reason string) error {
-	log.Printf("Retry connect, reason: %s", reason)
-	time.Sleep(retryttl)
-	i.retries = i.retries + 1
-	if i.retries > maxretries-1 {
-		return fmt.Errorf("%s: Last error: %s", errMaxRetriesReached, reason)
-	}
-	err := i.Connect()
-
-	if err == nil {
-		i.retries = 0
-	}
-
-	return err
-}
-
 // Connect ...
 func (i *Interface) Connect() error {
-	taken, err := i.addressAlreadyTaken()
+	rand.Seed(time.Now().UnixNano())
+	initialInterval := rand.Intn(JitterRange) + 1
+	exp := backoff.NewExponentialBackOff()
+	exp.MaxElapsedTime = MaxElapsedTime
+	exp.MaxInterval = MaxInterval
+	exp.InitialInterval = time.Duration(initialInterval) * time.Second
+
+	notify := func(err error, time time.Duration) {
+		log.Warnf("wirey error %+v, retrying in %s\n", err, time)
+	}
+	err := backoff.RetryNotify(func() error {
+		taken, err := i.addressAlreadyTaken()
+		if taken {
+			exp.MaxElapsedTime = backoff.Stop
+			return fmt.Errorf(errAddressAlreadyTaken, *i.LocalPeer.IP)
+		}
+		return err
+	}, exp, notify)
 
 	if err != nil {
-		return i.retryConnection(err.Error())
-	}
-
-	if taken {
-		return fmt.Errorf(errAddressAlreadyTaken, *i.LocalPeer.IP)
+		return fmt.Errorf("error %+v", err)
 	}
 
 	// Join
@@ -198,24 +200,29 @@ func (i *Interface) Connect() error {
 	allowedIps := ""
 
 	for {
-		workingPeers, err := i.Backend.GetPeers(i.Name)
-		if err != nil {
-			return i.retryConnection(fmt.Sprintf("problem during extraction of peers from the backend: %s", err.Error()))
-		}
+		var workingPeers []Peer
+		err := backoff.RetryNotify(func() error {
+			workingPeers, err = i.Backend.GetPeers(i.Name)
+			if err != nil {
+				return fmt.Errorf("problem during extraction of peers from backend: %s", err)
+			}
+			return err
+		}, exp, notify)
 
 		// We don't change anything if the peers remain the same
 		newPeersSHA := extractPeersSHA(workingPeers)
 		if newPeersSHA == peersSHA {
+			log.Debugf("Peers matched, sleeping for %s \n", i.PeerCheckTTL)
 			time.Sleep(i.PeerCheckTTL)
 			continue
 		}
-		log.Println("The peer list changed, reconfiguring...")
+		log.Infoln("The peer list changed, reconfiguring...")
 		peersSHA = newPeersSHA
 
-		log.Println("Delete old link")
 		// delete any old link
 		link, _ := netlink.LinkByName(i.Name)
 		if link != nil {
+			log.Infoln("Delete old link")
 			netlink.LinkDel(link)
 		}
 
@@ -228,13 +235,15 @@ func (i *Interface) Connect() error {
 		}
 		err = netlink.LinkAdd(wirelink)
 		if err != nil {
-			return i.retryConnection(fmt.Sprintf(errAddLink, err.Error()))
+			log.Infof(errAddLink, err.Error())
+			return i.Connect()
 		}
 
 		// Add the actual address to the link
 		addr, err := netlink.ParseAddr(fmt.Sprintf("%s/24", i.LocalPeer.IP.String()))
 		if err != nil {
-			return i.retryConnection(fmt.Sprintf("error parsing the new ip address: %s", err.Error()))
+			log.Infof("error parsing the new ip address: %s", err.Error())
+			return i.Connect()
 		}
 
 		// Configure wireguard
@@ -272,7 +281,7 @@ func (i *Interface) Connect() error {
 		_, err = wireguard.SetConf(i.Name, conf)
 
 		if err != nil {
-			return i.retryConnection(err.Error())
+			return i.Connect()
 		}
 
 		netlink.AddrAdd(wirelink, addr)
