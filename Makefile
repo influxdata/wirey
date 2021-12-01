@@ -14,5 +14,13 @@ build:
 	mkdir -p bin
 	go build ${LDFLAGS} -o bin/wirey ./cmd/wirey
 
-test:
+.PHONY: vendor
+vendor:
+	go mod vendor
+
+.PHONY: test
+test: vendor
 	go test -v ./...
+
+gorelease:
+	goreleaser release --snapshot --rm-dist
