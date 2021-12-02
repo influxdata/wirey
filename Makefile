@@ -22,5 +22,10 @@ vendor:
 test: vendor
 	go test -v ./...
 
+.PHONY: fmt
+fmt:
+	go fmt ./...
+
+
 gorelease:
 	goreleaser release --snapshot --rm-dist

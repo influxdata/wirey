@@ -87,7 +87,7 @@ func NewInterface(
 	// Check that the passed interface name is ok for the kernel
 	// https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux-stable.git/tree/include/uapi/linux/if.h?h=v4.14.36#n33
 	if len(ifname) > ifnamesiz {
-		return nil, fmt.Errorf(errInterfaceNameLength + " %d", ifnamesiz)
+		return nil, fmt.Errorf(errInterfaceNameLength+" %d", ifnamesiz)
 	}
 
 	if _, err := os.Stat(privateKeyPath); os.IsNotExist(err) {
