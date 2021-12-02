@@ -27,6 +27,14 @@ var rootCmd = &cobra.Command{
 	Use:   "wirey",
 	Short: "manage local wireguard interfaces in a distributed system",
 	Run: func(cmd *cobra.Command, args []string) {
+		// Lookup user provided log-level
+		level, err := log.ParseLevel(viper.GetString("log-level"))
+		if err != nil {
+			log.Warn(err)
+		}
+		// Set logrus loglevel based on flags
+		log.SetLevel(level)
+
 		b, err := backendFactory()
 
 		if err != nil {
@@ -227,7 +235,7 @@ func init() {
 	pflags.String("privatekeypath", "/etc/wirey/privkey", "the local path where to load the private key from, if empty, a private key will be generated.")
 	pflags.String("discover", "", "discover configuration from the provider. e.g: provider=aws region=eu-west-1 ... Check go-discover for all the options.")
 	pflags.StringSlice("allowedips", nil, "array of allowed ips")
-	pflags.String("log-level", "warn", "logging level to be used panic, fatal, error, trace, debug, warn, info")
+	pflags.String("log-level", "info", "logging level to be used panic, fatal, error, trace, debug, warn, info")
 
 	rootCmd.MarkFlagRequired("endpoint")
 	rootCmd.MarkFlagRequired("ipaddr")
@@ -254,12 +262,6 @@ func init() {
 	viper.SetEnvPrefix("wirey")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-
-	level, err := log.ParseLevel(viper.GetString("log-level"))
-	if err != nil {
-		log.Warn(err)
-	}
-	log.SetLevel(level)
 }
 
 func initConfig() {

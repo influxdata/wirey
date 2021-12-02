@@ -235,14 +235,14 @@ func (i *Interface) Connect() error {
 		}
 		err = netlink.LinkAdd(wirelink)
 		if err != nil {
-			log.Infof(errAddLink, err.Error())
+			log.Errorf(errAddLink, err.Error())
 			return i.Connect()
 		}
 
 		// Add the actual address to the link
 		addr, err := netlink.ParseAddr(fmt.Sprintf("%s/24", i.LocalPeer.IP.String()))
 		if err != nil {
-			log.Infof("error parsing the new ip address: %s", err.Error())
+			log.Errorf("error parsing the new ip address: %s", err.Error())
 			return i.Connect()
 		}
 
@@ -289,6 +289,7 @@ func (i *Interface) Connect() error {
 		// Up the link
 		err = netlink.LinkSetUp(wirelink)
 		if err != nil {
+			log.Errorf("failed to setup link: %s", err.Error())
 			return err
 		}
 
