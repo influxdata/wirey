@@ -28,7 +28,6 @@ release:
   github:
     owner: influxdata
     name: wirey
-  draft: true
   prerelease: auto
 changelog:
   sort: asc
