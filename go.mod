@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/cenkalti/backoff/v4 v4.1.2
 	github.com/coreos/etcd v3.3.17+incompatible // indirect
+	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2 // indirect
