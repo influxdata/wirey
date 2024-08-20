@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
+	"os"
 	"time"
 
 	"wirey/pkg/utils"
@@ -29,20 +31,44 @@ type HTTPBackend struct {
 
 // NewHTTPBackend ...
 func NewHTTPBackend(baseurl, wireyVersion string) (*HTTPBackend, error) {
+	defaultDialTimeout := 30 * time.Second
+	defaultTLSHandshakeTimeout := 30 * time.Second
+	defaultClientTimeout := 60 * time.Second
+
+	dialTimeout := getEnvAsDuration("DIAL_TIMEOUT", defaultDialTimeout)
+	tlsHandshakeTimeout := getEnvAsDuration("TLS_HANDSHAKE_TIMEOUT", defaultTLSHandshakeTimeout)
+	clientTimeout := getEnvAsDuration("CLIENT_TIMEOUT", defaultClientTimeout)
+
 	var transportWithTimeout = &http.Transport{
 		Dial: (&net.Dialer{
-			Timeout: 30 * time.Second,
+			Timeout: dialTimeout,
 		}).Dial,
-		TLSHandshakeTimeout: 30 * time.Second,
+		TLSHandshakeTimeout: tlsHandshakeTimeout,
 	}
+
 	return &HTTPBackend{
 		client: &http.Client{
-			Timeout:   time.Second * 60,
+			Timeout:   clientTimeout,
 			Transport: transportWithTimeout,
 		},
 		baseurl:      baseurl,
 		wireyVersion: wireyVersion,
 	}, nil
+}
+
+func getEnvAsDuration(envVar string, defaultValue time.Duration) time.Duration {
+	valueStr := os.Getenv(envVar)
+	if valueStr == "" {
+		return defaultValue
+	}
+
+	parsedValue, err := time.ParseDuration(valueStr)
+	if err != nil {
+		log.Printf("Invalid duration format for %s: %s, using default value %v\n", envVar, valueStr, defaultValue)
+		return defaultValue
+	}
+
+	return parsedValue
 }
 
 // Join ...
