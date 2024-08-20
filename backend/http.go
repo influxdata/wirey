@@ -31,13 +31,13 @@ type HTTPBackend struct {
 func NewHTTPBackend(baseurl, wireyVersion string) (*HTTPBackend, error) {
 	var transportWithTimeout = &http.Transport{
 		Dial: (&net.Dialer{
-			Timeout: 5 * time.Second,
+			Timeout: 30 * time.Second,
 		}).Dial,
-		TLSHandshakeTimeout: 5 * time.Second,
+		TLSHandshakeTimeout: 30 * time.Second,
 	}
 	return &HTTPBackend{
 		client: &http.Client{
-			Timeout:   time.Second * 10,
+			Timeout:   time.Second * 60,
 			Transport: transportWithTimeout,
 		},
 		baseurl:      baseurl,

@@ -16,9 +16,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"wirey/pkg/wireguard"
+
 	"github.com/cenkalti/backoff/v4"
 	"github.com/vishvananda/netlink"
-	"wirey/pkg/wireguard"
 )
 
 const (
@@ -38,7 +39,7 @@ const (
 
 // values used for exponentialBackoff
 const (
-	MaxElapsedTime = 15 * time.Minute
+	MaxElapsedTime = 30 * time.Minute
 	MaxInterval    = 120 * time.Second
 	JitterRange    = 5
 )
