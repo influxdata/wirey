@@ -37,12 +37,39 @@ const (
 	errIntConversionPort      = "error during port conversion to int: %s"
 )
 
-// values used for exponentialBackoff
-const (
-	MaxElapsedTime = 30 * time.Minute
-	MaxInterval    = 120 * time.Second
-	JitterRange    = 5
+var (
+	defaultMaxElapsedTime = 30 * time.Minute
+	defaultMaxInterval    = 120 * time.Second
+	defaultJitterRange    = 5
 )
+
+// values used for exponentialBackoff
+var (
+	MaxElapsedTime time.Duration
+	MaxInterval    time.Duration
+	JitterRange    int
+)
+
+func init() {
+	MaxElapsedTime = getEnvAsDuration("MAX_ELAPSED_TIME", defaultMaxElapsedTime)
+	MaxInterval = getEnvAsDuration("MAX_INTERVAL", defaultMaxInterval)
+	JitterRange = getEnvAsInt("JITTER_RANGE", defaultJitterRange)
+}
+
+func getEnvAsInt(envVar string, defaultValue int) int {
+	valueStr := os.Getenv(envVar)
+	if valueStr == "" {
+		return defaultValue
+	}
+
+	parsedValue, err := strconv.Atoi(valueStr)
+	if err != nil {
+		log.Printf("Invalid integer format for %s: %s, using default value %d\n", envVar, valueStr, defaultValue)
+		return defaultValue
+	}
+
+	return parsedValue
+}
 
 // Peer ...
 type Peer struct {
