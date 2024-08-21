@@ -20,13 +20,18 @@ type EtcdBackend struct {
 
 // NewEtcdBackend ...
 func NewEtcdBackend(endpoints []string) (*EtcdBackend, error) {
+	defaultDialTimeout := 5 * time.Second
+
+	dialTimeout := getEnvAsDuration("ETCD_DIAL_TIMEOUT", defaultDialTimeout)
+
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints:   endpoints,
-		DialTimeout: 5 * time.Second,
+		DialTimeout: dialTimeout,
 	})
 	if err != nil {
 		return nil, err
 	}
+
 	return &EtcdBackend{
 		client: cli,
 	}, nil
