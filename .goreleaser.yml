@@ -3,6 +3,8 @@ version: 2
 before:
   hooks:
     - go mod tidy
+    - rm -rf dist/*
+    - mkdir -p dist
 
 builds:
   - env:
@@ -19,6 +21,7 @@ builds:
     main: ./cmd/wirey
     ldflags:
       - -s -X main.Version={{.Version}}
+    nolink: true
 
 archives:
   - format: tar.gz
