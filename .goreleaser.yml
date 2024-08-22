@@ -3,7 +3,6 @@ version: 2
 before:
   hooks:
     - go mod tidy
-    - rm -rf dist/*
 
 builds:
   - env:
@@ -23,7 +22,7 @@ builds:
 
 archives:
   - format: tar.gz
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}_{{.Timestamp}}"
     files:
       - LICENSE
       - README.md
