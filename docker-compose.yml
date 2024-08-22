@@ -1,0 +1,97 @@
+version: '3'
+services:
+  discovery-server:
+    image: ubuntu:latest
+    container_name: discovery-server
+    hostname: discovery-server
+    networks:
+      wireguard_net:
+        ipv4_address: 192.168.33.10
+    environment:
+      - DOCKER_HOST=192.168.33.10
+    ports:
+      - "2379:2379"
+    privileged: true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: >
+      /bin/bash -c "
+      apt-get update -y &&
+      apt-get install -y curl &&
+      curl -fsSL get.docker.com -o get-docker.sh &&
+      sh get-docker.sh &&
+      dockerd & sleep 5 &&
+      docker run --restart always --name etcd -d --net=host quay.io/coreos/etcd:v3.3
+      /usr/local/bin/etcd --listen-client-urls http://192.168.33.10:2379
+      --advertise-client-urls http://192.168.33.10:2379"
+
+  net-1:
+    image: ubuntu:latest
+    container_name: wirey-node-1
+    hostname: wirey-node-1
+    networks:
+      wireguard_net:
+        ipv4_address: 192.168.33.11
+    environment:
+      - NODE_IP=192.168.33.11
+    command: >
+      /bin/bash -c "
+      apt-get update -y &&
+      apt-get install -y libmnl-dev gcc make wget xz-utils &&
+      cd /tmp &&
+      wget https://git.zx2c4.com/WireGuard/snapshot/WireGuard-0.0.20180420.tar.xz &&
+      tar -xvf WireGuard-0.0.20180420.tar.xz &&
+      cd WireGuard-0.0.20180420/src &&
+      make &&
+      make install"
+
+  net-2:
+    image: ubuntu:latest
+    container_name: wirey-node-2
+    hostname: wirey-node-2
+    networks:
+      wireguard_net:
+        ipv4_address: 192.168.33.12
+    environment:
+      - NODE_IP=192.168.33.12
+    command: >
+      /bin/bash -c "
+      apt-get update -y &&
+      apt-get install -y libmnl-dev gcc make wget xz-utils &&
+      cd /tmp &&
+      wget https://git.zx2c4.com/WireGuard/snapshot/WireGuard-0.0.20180420.tar.xz &&
+      tar -xvf WireGuard-0.0.20180420.tar.xz &&
+      cd WireGuard-0.0.20180420/src &&
+      make &&
+      make install"
+
+  net-3:
+    image: ubuntu:latest
+    container_name: wirey-node-3
+    hostname: wirey-node-3
+    networks:
+      wireguard_net:
+        ipv4_address: 192.168.33.13
+    environment:
+      - NODE_IP=192.168.33.13
+    command: >
+      /bin/bash -c "
+      apt-get update -y &&
+      apt-get install -y libmnl-dev gcc make wget xz-utils &&
+      cd /tmp &&
+      wget https://git.zx2c4.com/WireGuard/snapshot/WireGuard-0.0.20180420.tar.xz &&
+      tar -xvf WireGuard-0.0.20180420.tar.xz &&
+      cd WireGuard-0.0.20180420/src &&
+      make &&
+      make install"
+
+networks:
+  wireguard_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.33.0/24
+
+
+
+
