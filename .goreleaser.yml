@@ -3,8 +3,6 @@ version: 2
 before:
   hooks:
     - go mod tidy
-    - rm -rf dist/*
-    - mkdir -p dist
 
 builds:
   - env:
