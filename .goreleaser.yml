@@ -21,7 +21,6 @@ builds:
     main: ./cmd/wirey
     ldflags:
       - -s -X main.Version={{.Version}}
-    nolink: true
 
 archives:
   - format: tar.gz
