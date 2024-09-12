@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/rand"
 	"net"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"strings"
@@ -116,6 +118,17 @@ func backendFactory() (backend.Backend, error) {
 	httpBackend := viper.GetString("http")
 	//httpPortBackend := viper.GetInt("http-port")
 	discoverConf := viper.GetString("discover")
+	enableProfiling := viper.GetBool("enable-profiling")
+
+	if enableProfiling {
+		go func() {
+			profileAddr := viper.GetString("profile-addr")
+			log.Printf("Starting pprof server on %s\n", profileAddr)
+			if err := http.ListenAndServe(profileAddr, nil); err != nil {
+				log.Fatalf("Error starting pprof server: %v\n", err)
+			}
+		}()
+	}
 
 	// discover
 	discoverHosts := []string{}
@@ -236,6 +249,10 @@ func init() {
 	pflags.String("discover", "", "discover configuration from the provider. e.g: provider=aws region=eu-west-1 ... Check go-discover for all the options.")
 	pflags.StringSlice("allowedips", nil, "array of allowed ips")
 	pflags.String("log-level", "info", "logging level to be used panic, fatal, error, trace, debug, warn, info")
+
+	// profiling flags
+	pflags.Bool("enable-profiling", false, "Enable pprof profiling")
+	pflags.String("profile-addr", "localhost:6060", "Address for pprof profiling")
 
 	rootCmd.MarkFlagRequired("endpoint")
 	rootCmd.MarkFlagRequired("ipaddr")
