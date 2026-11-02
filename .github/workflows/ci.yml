@@ -1,3 +1,4 @@
+# Updated action setup and dependency caching for Go 1.27.3.
 name: CI
 
 on:
@@ -11,20 +12,17 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GOTOOLCHAIN: local
     steps:
-      - name: Install Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.17
       - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Restore cache
-        uses: actions/cache@v2
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: Install Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
         with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          go-version: '1.27.3'
+          cache: true
+          cache-dependency-path: go.sum
       - name: Format
         run: if [ "$(go fmt ./... && git status --porcelain --untracked-files=no | wc -l)" -gt 0 ]; then exit 1; fi
       - name: Test
