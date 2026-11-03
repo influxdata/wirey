@@ -1,4 +1,4 @@
-# Updated action setup and dependency caching for Go 1.27.3.
+# Updated Go setup to use go.mod and dependency caching.
 name: CI
 
 on:
@@ -20,7 +20,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
         with:
-          go-version: '1.27.3'
+          go-version-file: go.mod
           cache: true
           cache-dependency-path: go.sum
       - name: Format
